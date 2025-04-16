@@ -1,0 +1,10 @@
+{
+  "tasks": [
+    {
+      "type": "xhs_keyword",
+      "keyword": "旅游",
+      "max_items": 20,
+      "noimage": false
+    }
+  ]
+}

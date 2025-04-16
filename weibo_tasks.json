@@ -1,0 +1,16 @@
+{
+  "tasks": [
+    {
+      "type": "wb_user",
+      "url": "https://weibo.com/u/1989660417",
+      "max_items": 50,
+      "noimage": true
+    },
+    {
+      "type": "wb_keyword",
+      "keyword": "关税",
+      "max_items": 50,
+      "noimage": true
+    }
+  ]
+}

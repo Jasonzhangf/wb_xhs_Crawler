@@ -1,0 +1,27 @@
+{
+  "wait_times": {
+    "min": 1000,
+    "max": 2000,
+    "PAGE_LOAD": 3000,
+    "COOKIE_INJECTION": 5000,
+    "CONTENT_EXPANSION": 1500,
+    "SCROLL_DELAY": 1500,
+    "BUTTON_RETRY_DELAY": 1000,
+    "ELEMENT_LOAD": 1000
+  },
+  "browser_config": {
+    "headless": true,
+    "args": ["--no-sandbox", "--window-size=1400,900"],
+    "channel": "chrome",
+    "executablePath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "detached": false
+  },
+  "selectors": {
+    "WEIBO_TEXT": "p[node-type='feed_list_content']",
+    "WEIBO_IMG": ".media.media-piclist img",
+    "NEXT_PAGE": "a.next",
+    "EXPAND_BUTTONS": [
+      "div[class*=\"fold\"]"
+    ]
+  }
+}
