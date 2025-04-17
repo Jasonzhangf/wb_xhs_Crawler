@@ -216,25 +216,31 @@ class XhsCrawler {
                             console.warn(`等待帖子详情元素加载超时或无内容: ${waitError.message}`);
                         }
 
-                        const title = await this.browser.contentCapture.getElementText(POST_DETAIL_TITLE_SELECTOR, '');
-                        const text = await this.browser.contentCapture.getElementText(POST_DETAIL_TEXT_SELECTOR, '');
-                        let comments = await this.browser.page.evaluate((selector) => {
+                        const pageContent = await this.browser.page.evaluate((titleSelector, textSelector, commentSelector) => {
+                            const title = document.querySelector(titleSelector)?.innerText?.trim() || '';
+                            const text = document.querySelector(textSelector)?.innerText?.trim() || '';
                             const comments = [];
-                            document.querySelectorAll(selector).forEach(el => {
+                            document.querySelectorAll(commentSelector).forEach(el => {
                                 const commentText = el.innerText?.trim();
                                 if (commentText) {
                                     comments.push(commentText);
                                 }
                             });
-                            return comments;
-                        }, POST_DETAIL_COMMENT_SELECTOR);
+                            return { title, text, comments };
+                        }, POST_DETAIL_TITLE_SELECTOR, POST_DETAIL_TEXT_SELECTOR, POST_DETAIL_COMMENT_SELECTOR);
 
-                        const uniqueComments = [...new Set(comments)];
-                        console.log(`原始评论数: ${comments.length}, 去重后评论数: ${uniqueComments.length}`);
-                        comments = uniqueComments;
+                        const uniqueComments = [...new Set(pageContent.comments)];
+                        console.log(`原始评论数: ${pageContent.comments.length}, 去重后评论数: ${uniqueComments.length}`);
 
                         const detailPageUrl = this.browser.page.url();
-                        const content = { title, text, comments, url: detailPageUrl };
+                        const content = { 
+                            title: pageContent.title,
+                            text: pageContent.text,
+                            comments: uniqueComments,
+                            url: detailPageUrl,
+                            images: [],
+                            ocr_texts: []
+                        };
 
                         if (!content.title && !content.text) {
                             console.warn(`未能提取到帖子 "${postTitleText}" 的标题或内容，可能页面结构已更改`);
@@ -243,7 +249,52 @@ class XhsCrawler {
                         }
 
                         const noteDir = this.createNoteDirectory(taskDir, processedCount + 1);
-                        await this.processNoteContent(noteDir, content, !task.noimage);
+
+                        // 获取并下载帖子图片
+                        const imageUrls = await this.browser.page.evaluate((selector) => {
+                            const imgs = Array.from(document.querySelectorAll(selector));
+                            return imgs.map(img => img.src).filter(src => src && src.startsWith('http'));
+                        }, POST_DETAIL_IMAGE_SELECTOR);
+
+                        if (!task.noimage && imageUrls.length > 0) {
+                            console.log(`找到 ${imageUrls.length} 张图片`);
+                            const seenUrls = new Set();
+                            const uniqueImageUrls = imageUrls.filter(url => {
+                                if (!seenUrls.has(url)) {
+                                    seenUrls.add(url);
+                                    return true;
+                                }
+                                return false;
+                            });
+
+                            for (let i = 0; i < uniqueImageUrls.length; i++) {
+                                try {
+                                    const imgUrl = uniqueImageUrls[i];
+                                    const imgPath = path.join(noteDir, `image_${i + 1}.jpg`);
+                                    await this.downloadImage(imgUrl, imgPath);
+                                    content.images.push(imgPath);
+                                    console.log(`已下载图片: ${imgPath}`);
+
+                                    const ocrText = await OCRProcessor.extractTextFromImage(imgPath);
+                                    if (ocrText) {
+                                        content.ocr_texts.push({
+                                            image_index: i + 1,
+                                            text: ocrText
+                                        });
+                                        console.log(`图片 ${i + 1} OCR 完成`);
+                                    }
+                                } catch (error) {
+                                    console.error(`处理图片失败: ${error.message}`);
+                                }
+                            }
+                        }
+
+                        // 保存内容到JSON文件
+                        fs.writeFileSync(
+                            path.join(noteDir, 'content.json'),
+                            JSON.stringify(content, null, 2),
+                            'utf8'
+                        );
 
                         this.processedPostUrls.add(urlHash);
                         processedInThisScroll.add(urlHash);
