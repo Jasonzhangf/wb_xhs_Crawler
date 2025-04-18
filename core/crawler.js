@@ -35,6 +35,7 @@ class Crawler {
      */
     ensureDir(dirPath) {
         if (!fs.existsSync(dirPath)) {
+            console.log(`创建目录: ${dirPath}`);
             fs.mkdirSync(dirPath, { recursive: true });
         }
     }

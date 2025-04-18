@@ -1,10 +1,11 @@
 {
   "tasks": [
     {
-      "type": "xhs_keyword",
+      "type": "wb_keyword",
       "keyword": "美国关税",
       "max_items": 20,
-      "noimage": false
+      "noimage": false,
+      "export": "D:\\Docs\\Obsidian\\Obsidian\\总结"
     }
   ]
 }

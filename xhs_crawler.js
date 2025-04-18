@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const minimist = require('minimist');
 const puppeteer = require('puppeteer');
-const ocrProcessor = require('./utils/ocrProcessor');
+const OCRProcessor = require('./utils/ocrProcessor');
 
 // 处理小红书关键词搜索任务
 async function processXhsKeywordTask(task, browser) {
@@ -78,12 +78,19 @@ async function processXhsKeywordTask(task, browser) {
                             const imgPath = path.join(noteDir, `image_${i+1}.jpg`);
                             const imgResponse = await page.goto(content.images[i]);
                             fs.writeFileSync(imgPath, await imgResponse.buffer());
-                            noteContent.images.push(imgPath);
-                            
-                            // OCR处理
-                            const ocrResult = await ocrProcessor.extractTextFromImage(imgPath);
+                            // 保存相对路径而非绝对路径
+                            const relativePath = path.join(path.basename(noteDir), `image_${i+1}.jpg`);
+                            noteContent.images.push(relativePath);
+ zhon                        
+                            // OCR处理，不打印调试信息
+                            // 使用绝对路径进行OCR处理，但在结果中保存相对路径
+                            const ocrResult = await OCRProcessor.extractTextFromImage(imgPath);
                             if (ocrResult) {
-                                noteContent.ocr_results.push(ocrResult);
+                                noteContent.ocr_results.push({
+                                    image_index: i + 1,
+                                    image_path: path.join(path.basename(noteDir), `image_${i+1}.jpg`),
+                                    text: ocrResult
+                                });
                             }
                         } catch (error) {
                             console.error(`下载图片失败: ${error.message}`);
@@ -117,6 +124,30 @@ async function processXhsKeywordTask(task, browser) {
             const contentFile = path.join(taskDir, i.toString(), 'content.json');
             if (fs.existsSync(contentFile)) {
                 const content = JSON.parse(fs.readFileSync(contentFile, 'utf8'));
+                
+                // 确保图片路径是相对路径
+                if (content.images && Array.isArray(content.images)) {
+                    content.images = content.images.map(imgPath => {
+                        // 如果是绝对路径，转换为相对路径
+                        if (path.isAbsolute(imgPath)) {
+                            return path.join(i.toString(), path.basename(imgPath));
+                        }
+                        return imgPath;
+                    });
+                }
+                
+                // 确保OCR结果包含正确的图片路径引用
+                if (content.ocr_results && Array.isArray(content.ocr_results)) {
+                    content.ocr_results = content.ocr_results.map(ocr => {
+                        if (!ocr.image_path) {
+                            ocr.image_path = path.join(i.toString(), `image_${ocr.image_index}.jpg`);
+                        } else if (path.isAbsolute(ocr.image_path)) {
+                            ocr.image_path = path.join(i.toString(), path.basename(ocr.image_path));
+                        }
+                        return ocr;
+                    });
+                }
+                
                 mergedData.push(content);
             }
         }
@@ -147,15 +178,18 @@ async function main() {
     try {
         const argv = minimist(process.argv.slice(2));
         const inputFile = argv.input || 'weibo_tasks.json';
-        const visibleMode = argv.visible !== undefined;
+        // 修改判断逻辑，只有当--visible参数明确设置为true时才启用有头模式
+        const visibleMode = argv.visible === true;
         
         const tasksData = JSON.parse(fs.readFileSync(inputFile, 'utf8'));
         const tasks = tasksData.tasks || [];
         
         const browser = await puppeteer.launch({
-            headless: false,
+            headless: !visibleMode, // 默认使用无头模式，只有当--visible=true时才使用有头模式
             args: ['--disable-blink-features=AutomationControlled']
         });
+        
+        console.log(`浏览器已启动，模式: ${visibleMode ? '可见' : '无头'} (headless=${!visibleMode})`);
         
         for (const task of tasks) {
             if (task.type === 'xhs_keyword') {

@@ -42,7 +42,8 @@ class XhsCrawler {
     }
 
     async initialize() {
-        await this.browser.core.initialize(this.visibleMode);
+        this.browser.core.visibleMode = this.visibleMode;
+        await this.browser.core.initialize();
         this.browser.interaction = new BaseInteraction(this.browser.page);
         this.browser.scrolling = new XhsScrolling(this.browser.page);
         const cookiePath = path.join(process.cwd(), 'xiaohongshu_cookie.json');
@@ -272,9 +273,12 @@ class XhsCrawler {
                                     const imgUrl = uniqueImageUrls[i];
                                     const imgPath = path.join(noteDir, `image_${i + 1}.jpg`);
                                     await this.downloadImage(imgUrl, imgPath);
-                                    content.images.push(imgPath);
+                                    // 存储相对路径，使用正斜杠以确保跨平台兼容性
+                                    const relativePath = path.relative(process.cwd(), imgPath).replace(/\\/g, '/');
+                                    content.images.push(relativePath);
                                     console.log(`已下载图片: ${imgPath}`);
 
+                                    // 使用绝对路径进行OCR处理
                                     const ocrText = await OCRProcessor.extractTextFromImage(imgPath);
                                     if (ocrText) {
                                         content.ocr_texts.push({
@@ -383,26 +387,37 @@ class XhsCrawler {
     }
 
     async downloadImage(url, filepath) {
-        return new Promise((resolve, reject) => {
-            const file = fs.createWriteStream(filepath);
-            https.get(url, { rejectUnauthorized: false }, (response) => {
-                if (response.statusCode !== 200) {
-                    file.close(() => reject(new Error(`下载图片失败，状态码: ${response.statusCode}, URL: ${url}`)));
-                    fs.unlink(filepath, () => {});
-                    return;
-                }
-                response.pipe(file);
-                file.on('finish', () => {
-                    file.close(err => {
-                        if (err) reject(err);
-                        else resolve();
+        try {
+            // 确保目录存在
+            const dirPath = path.dirname(filepath);
+            if (!fs.existsSync(dirPath)) {
+                fs.mkdirSync(dirPath, { recursive: true });
+            }
+            
+            return new Promise((resolve, reject) => {
+                const file = fs.createWriteStream(filepath);
+                https.get(url, { rejectUnauthorized: false }, (response) => {
+                    if (response.statusCode !== 200) {
+                        file.close(() => reject(new Error(`下载图片失败，状态码: ${response.statusCode}, URL: ${url}`)));
+                        fs.unlink(filepath, () => {});
+                        return;
+                    }
+                    response.pipe(file);
+                    file.on('finish', () => {
+                        file.close(err => {
+                            if (err) reject(err);
+                            else resolve();
+                        });
                     });
+                }).on('error', (err) => {
+                    fs.unlink(filepath, () => {});
+                    reject(err);
                 });
-            }).on('error', (err) => {
-                fs.unlink(filepath, () => {});
-                reject(err);
             });
-        });
+        } catch (error) {
+            console.error(`下载图片失败: ${error.message}`);
+            return false;
+        }
     }
 
     async processNoteContent(noteDir, content, downloadImages = true) {

@@ -4,6 +4,11 @@ class BaseInteraction {
     }
 
     // 等待指定时间
+    async waitForTimeout(ms) {
+        await this.page.waitForTimeout(ms);
+    }
+
+    // 等待指定时间
     async wait(ms) {
         await new Promise(resolve => setTimeout(resolve, ms));
     }

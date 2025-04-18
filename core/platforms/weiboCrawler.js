@@ -84,21 +84,29 @@ class WeiboCrawler extends Crawler {
             const maxItems = task.max_items || this.options.maxItems;
             const noImage = task.noimage || this.options.noImage;
             
-            // 创建任务目录
-            const taskDir = this.createTaskDir(keyword, maxItems);
+            // 准备任务目录名称
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}`;
+            const taskFolderName = `${keyword}_${dateStr}_${maxItems}条`;
+            const taskDir = path.join(process.cwd(), this.options.dataDir, taskFolderName);
             
             // 加载历史记录
-            let history = this.fileSystem.loadHistory(taskDir);
-            history = history.filter(item => fs.existsSync(item.folderPath));
+            let history = [];
+            if (fs.existsSync(taskDir)) {
+                history = this.fileSystem.loadHistory(taskDir);
+                history = history.filter(item => fs.existsSync(item.folderPath));
+            }
             
             // 获取当前最大序号
             let maxSeq = 0;
-            const folders = fs.readdirSync(taskDir);
-            for (const folder of folders) {
-                const match = folder.match(/^(\d+)$/);
-                if (match && fs.statSync(path.join(taskDir, folder)).isDirectory()) {
-                    const seq = parseInt(match[1]);
-                    if (seq > maxSeq) maxSeq = seq;
+            if (fs.existsSync(taskDir)) {
+                const folders = fs.readdirSync(taskDir);
+                for (const folder of folders) {
+                    const match = folder.match(/^(\d+)$/);
+                    if (match && fs.statSync(path.join(taskDir, folder)).isDirectory()) {
+                        const seq = parseInt(match[1]);
+                        if (seq > maxSeq) maxSeq = seq;
+                    }
                 }
             }
             
@@ -175,6 +183,10 @@ class WeiboCrawler extends Crawler {
                     }
                     
                     currentSeq++;
+                    // 确保任务主目录存在
+                    if (!fs.existsSync(taskDir)) {
+                        fs.mkdirSync(taskDir, { recursive: true });
+                    }
                     const postDir = path.join(taskDir, currentSeq.toString());
                     this.fileSystem.ensureDir(postDir);
                     
@@ -299,7 +311,7 @@ class WeiboCrawler extends Crawler {
             }
             
             // 保存合并文件
-            const taskFolderName = path.basename(taskDir);
+            //const taskFolderName = path.basename(taskDir);
             const mergedFile = path.join(taskDir, `${taskFolderName}.txt`);
             fs.writeFileSync(mergedFile, JSON.stringify(mergedData, null, 2));
             

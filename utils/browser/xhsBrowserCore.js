@@ -8,9 +8,9 @@ class XhsBrowserCore extends BaseBrowser {
             ...BROWSER_CONFIG,
             defaultViewport: null,
             ignoreHTTPSErrors: true,
-            timeout: 30000
+            timeout: 30000,
+            headless: !this.visibleMode
         };
-
     }
 
     getHomePage() {
