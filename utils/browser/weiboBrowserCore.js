@@ -1,24 +1,27 @@
 const puppeteer = require('puppeteer-core');
 const weiboConfig = require('../weiboConfig');
 const WeiboUserCapture = require('./weiboUserCapture');
+const OCRProcessor = require('../ocrProcessor');
+const WeiboFileSystem = require('../weiboFileSystem');
 
 class WeiboBrowserCore {
     constructor() {
         this.browser = null;
         this.page = null;
         this.userCapture = null;
+        this.fileSystem = WeiboFileSystem;
     }
 
-    // 初始化浏览器
+    // Initialize browser
     async initialize() {
-        // 如果已存在浏览器实例，先关闭它
+        // Close existing browser instance if any
         if (this.browser) {
             try {
                 const pages = await this.browser.pages();
                 await Promise.all(pages.map(page => page.close()));
                 await this.browser.close();
             } catch (error) {
-                console.log('关闭已有浏览器实例时出错:', error.message);
+                console.log('Error closing existing browser instance:', error.message);
             }
             this.browser = null;
             this.page = null;
@@ -28,54 +31,61 @@ class WeiboBrowserCore {
         const pages = await this.browser.pages();
         this.page = pages[0];
         await this.page.setViewport({ width: 1400, height: 900 });
-        this.userCapture = new WeiboUserCapture(this.page);
 
-        // 设置控制台日志监听
+        await this.page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+
+        this.userCapture = new WeiboUserCapture(this.page, this.fileSystem);
+
+        // Set console log listener
         this.page.on('console', msg => {
             for (let i = 0; i < msg.args().length; ++i)
-                msg.args()[i].jsonValue().then(val => console.log('浏览器日志:', val)).catch(() => {});
+                msg.args()[i].jsonValue().then(val => console.log('Browser log:', val)).catch(() => {});
         });
+
+        // Wait to ensure browser is ready
+        await this.wait(5000);
+    }
+
+    // 等待页面稳定
+    async waitForPageStable() {
+        await this.wait(5000);
+        return true;
     }
 
     // 加载Cookie
-    async captureUserPosts(maxItems) {
-        return this.userCapture.captureUserPosts(maxItems);
+    async captureUserPosts(maxItems, noimage = false) {
+        try {
+            // Get username from profile header
+            const username = await this.userCapture.captureUsername();
+            if (!username) {
+                throw new Error('Failed to capture username');
+            }
+
+            // Create task folder
+            const taskFolder = this.fileSystem.createTaskFolder(username, maxItems);
+            console.log(`Created task folder: ${taskFolder}`);
+
+            // Capture posts
+            const capturedCount = await this.userCapture.captureUserPosts(maxItems, taskFolder, noimage);
+            console.log(`Captured ${capturedCount} posts`);
+
+            // Merge JSON files and create export if needed
+            await this.fileSystem.mergeJsonFiles(taskFolder);
+
+            return capturedCount;
+        } catch (error) {
+            console.error('Error in captureUserPosts:', error);
+            throw error;
+        }
     }
 
     async loadCookies(cookies) {
-        console.log('========== 微博登录流程开始 ==========');
-        console.log('1. 准备登录weibo.com');
-        
-        // 检查是否为手动模式
-        if (weiboConfig.MANUAL_MODE) {
-            console.log('\n处于手动模式，请在浏览器中进行必要的操作，完成后按回车键继续...');
-            // 等待用户按回车键
-            await new Promise(resolve => {
-                const readline = require('readline').createInterface({
-                    input: process.stdin,
-                    output: process.stdout
-                });
-                readline.question('', () => {
-                    readline.close();
-                    resolve();
-                });
-            });
-            console.log('继续执行任务...');
-        }
-
         try {
-            // 先访问微博首页，确保能正确注入cookie
-            console.log('正在访问微博首页...');
-            await this.page.goto('https://weibo.com', { waitUntil: 'networkidle2', timeout: 60000 });
-            console.log('微博首页加载完成，等待页面稳定...');
-            await this.wait(weiboConfig.WAIT_TIMES.PAGE_LOAD * 1.5); // 增加等待时间
-            console.log('页面已稳定，准备注入Cookie');
-            
             if (!cookies || cookies.length === 0) {
                 throw new Error('Cookie数据为空或格式不正确');
             }
             
-            console.log('========== 2. 开始注入Cookie ==========');
+            console.log('========== 开始注入Cookie ==========');
             console.log(`准备注入${cookies.length}个Cookie...`);
             let successCount = 0;
             for (const cookie of cookies) {
@@ -85,6 +95,7 @@ class WeiboBrowserCore {
                         console.warn(`跳过格式不正确的Cookie: ${JSON.stringify(cookie)}`);
                         continue;
                     }
+                    console.log(`Setting cookie: ${cookie.name}`);
                     await this.page.setCookie(cookie);
                     successCount++;
                     if (successCount % 5 === 0 || successCount === cookies.length) {
@@ -96,67 +107,65 @@ class WeiboBrowserCore {
             }
             console.log(`Cookie注入完成: 成功 ${successCount}/${cookies.length} 个`);
             
+            // 重新加载当前页面以应用Cookie
             console.log('重新加载页面以应用Cookie...');
             await this.page.reload({ waitUntil: 'networkidle2', timeout: 60000 });
             console.log('页面重新加载完成，等待Cookie生效...');
             
-            // 增加Cookie注入后的等待时间，固定为10秒
-            const waitTime = 10000; // 固定等待10秒，确保cookie稳定生效
+            // 等待Cookie生效
+            const waitTime = 5000;
             console.log(`等待 ${waitTime/1000} 秒让Cookie稳定生效...`);
             await this.wait(waitTime);
             
-            // 再次验证页面状态
-            console.log('再次验证页面状态...');
-            try {
-                await this.page.reload({ waitUntil: 'networkidle2', timeout: 30000 });
-                console.log('页面再次加载完成，确保Cookie已完全生效');
-                await this.wait(2000); // 短暂等待页面稳定
-            } catch (reloadError) {
-                console.warn(`页面重新加载失败: ${reloadError.message}，但将继续执行`);
-            }
-            
-            console.log('========== 3. 等待页面稳定后准备访问搜索链接 ==========');
-            // 验证Cookie是否生效
-            const isLoggedIn = await this.checkLoginStatus();
-            if (!isLoggedIn) {
-                console.warn('警告: Cookie可能未正确注入，登录状态未检测到');
-                console.log('将尝试继续执行，但可能需要手动登录');
-            } else {
-                console.log('Cookie注入成功，已检测到登录状态');
-                console.log('页面已稳定，可以开始访问搜索链接');
-            }
+
         } catch (error) {
             console.error(`Cookie注入过程中出错: ${error.message}`);
-            console.log('将继续执行，但可能需要手动登录');
+            throw error;
         }
-        console.log('========== 微博登录流程结束 ==========');
     }
 
     // 导航到目标页面
     async navigateToPage(url) {
-        console.log('========== 4. 开始访问搜索链接 ==========');
         console.log(`正在导航到: ${url}`);
         try {
-            // 确保在访问目标链接前已经完成了cookie注入流程
-            const cookies = await this.page.cookies();
-            if (!cookies || cookies.length === 0) {
-                console.warn('警告: 未检测到Cookie，可能会导致访问失败');
-                console.log('尝试重新访问微博首页并等待...');
-                await this.page.goto('https://weibo.com', { waitUntil: 'networkidle2', timeout: 60000 });
-                await this.wait(5000); // 等待5秒确保页面加载
+            if (typeof url !== 'string') {
+                console.error('URL is not a string:', url);
+                throw new Error('URL is not a string');
             }
-            
+
+            if (!url.startsWith('http')) {
+            console.error('URL is not a valid HTTP URL:', url);
+                throw new Error('URL is not a valid HTTP URL');
+            }
+
+            // 监听请求失败事件
+            this.page.on('requestfailed', request => {
+                console.error(`Request failed: ${request.url()} ${request.failure().errorText}`);
+            });
+
+            // 监听响应事件
+            // this.page.on('response', response => {
+            //     console.log(`Response: ${response.url()} ${response.status()} ${response.statusText()}`);
+            // });
+ 
             // 访问目标链接
             console.log(`正在导航到目标链接: ${url}`);
-            await this.page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
-            console.log('页面加载完成，等待页面稳定...');
-            await this.wait(weiboConfig.WAIT_TIMES.PAGE_LOAD);
-            console.log('页面已稳定，导航成功');
+            const response = await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000, maxRedirects: 20 });
+            console.log('页面加载完成');
+            if (response && !response.ok()) {
+                console.error(`HTTP error: ${response.status()} ${response.statusText()}`);
+                return false;
+            }
             return true;
+
         } catch (error) {
             console.error(`导航失败: ${error.message}`);
-            console.log('等待5秒后继续执行...');
-            await this.wait(5000);
+            console.log('等待15秒后继续执行...');
+            await this.wait(15000);
+            return false;
+        } finally {
+            this.page.removeAllListeners('requestfailed');
+            this.page.removeAllListeners('response');
         }
     }
 

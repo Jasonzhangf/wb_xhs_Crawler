@@ -1,11 +1,25 @@
 {
   "tasks": [
     {
+      "type": "xhs_keyword",
+      "keyword": "mcp",
+      "max_items":10,
+      "noimage": true,
+      "export": ".\\总结"
+    },
+    {
       "type": "wb_keyword",
-      "keyword": "美国关税",
-      "max_items": 20,
-      "noimage": false,
-      "export": "D:\\Docs\\Obsidian\\Obsidian\\总结"
+      "keyword": "mcp",
+      "max_items": 10,
+      "noimage": true,
+      "export": ".\\总结"
+    },  
+    {
+      "type": "wb_user",
+      "url": "www.weibo.com",
+      "max_items": 10,
+      "noimage": true,
+      "export": ".\\总结"
     }
   ]
 }

@@ -69,7 +69,7 @@ class BaseBrowser {
             await this.page.reload({ waitUntil: 'networkidle2', timeout: 60000 });
             await this.wait(2000); // 等待Cookie生效
             
-            return await this.checkLoginStatus();
+            return true;
         } catch (error) {
             console.error(`Cookie注入过程中出错: ${error.message}`);
             return false;
@@ -100,7 +100,7 @@ class BaseBrowser {
 
     // 检查登录状态，子类需要实现此方法
     async checkLoginStatus() {
-        throw new Error('checkLoginStatus method must be implemented by child class');
+       return true;
     }
 
     // 关闭浏览器

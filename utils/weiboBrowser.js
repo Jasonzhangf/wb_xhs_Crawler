@@ -41,23 +41,6 @@ class WeiboBrowser {
 
     // 导航到目标页面
     async navigateToPage(url) {
-        // 检查是否为手动模式
-        const weiboConfig = require('./weiboConfig');
-        if (weiboConfig.MANUAL_MODE) {
-            console.log('\n处于手动模式，请在浏览器中进行必要的操作，完成后按回车键继续...');
-            // 等待用户按回车键
-            await new Promise(resolve => {
-                const readline = require('readline').createInterface({
-                    input: process.stdin,
-                    output: process.stdout
-                });
-                readline.question('', () => {
-                    readline.close();
-                    resolve();
-                });
-            });
-            console.log('继续执行任务...');
-        }
         await this.core.navigateToPage(url);
     }
 

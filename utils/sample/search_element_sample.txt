@@ -1,0 +1,51 @@
+1. Feed Container Sample:
+<div class="Feed_body_3R0rO">
+  <header class="woo-box-flex">
+    <!-- User info header -->
+  </header>
+  <div class="wbpro-feed-content">
+    <div class="detail_text_1U10O detail_ogText_2Z1Q8 wbpro-feed-ogText">
+      <div class="detail_wbtext_4CRf9">Post text content here</div>
+    </div>
+  </div>
+</div>
+
+2. Post Stats Container Sample:
+<div class="woo-box-flex woo-box-alignCenter woo-box-justifyCenter toolbar_iconWrap_3-rI7">
+  <i class="woo-font woo-font--retweet toolbar_retweetIcon_3_EwF" title="转发"></i>
+  <span class="toolbar_num_JXZul">35</span>
+</div>
+<div class="woo-box-flex woo-box-alignCenter woo-box-justifyCenter toolbar_iconWrap_3-rI7">
+  <i class="woo-font woo-font--comment toolbar_commentIcon_3o7HB" title="评论"></i>
+  <span class="toolbar_num_JXZul">70</span>
+</div>
+<div class="woo-box-flex woo-box-alignCenter woo-box-justifyCenter toolbar_iconWrap_3-rI7">
+  <button class="woo-like-main toolbar_btn_Cg9tz" title="赞">
+    <span class="woo-like-count">660</span>
+  </button>
+</div>
+
+3. Comment Container Sample:
+<div class="RepostCommentFeed_mar1_Lb4n1">
+  <div class="wbpro-list">
+    <div class="item1">
+      <div class="item1in woo-box-flex">
+        <div class="con1 woo-box-item-flex">
+          <div class="text">Comment text here</div>
+          <div class="info woo-box-flex woo-box-alignCenter woo-box-justifyBetween">
+            <div>Comment time and source</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+4. Key Selectors for Capture:
+- Feed container: .Feed_body_3R0rO
+- Post text: .detail_wbtext_4CRf9
+- Stats container: .toolbar_iconWrap_3-rI7
+- Comment container: .RepostCommentFeed_mar1_Lb4n1
+- Comment text: .item1in .text
+- Timestamp: .head-info_time_6sFQg
+- Post URL: a[href*="/detail/"]

@@ -11,6 +11,8 @@
   "description": "",
   "dependencies": {
     "minimist": "^1.2.8",
-    "puppeteer": "^24.6.0"
+    "node-fetch": "^2.7.0",
+    "puppeteer": "^24.6.0",
+    "yargs": "^17.7.2"
   }
 }
