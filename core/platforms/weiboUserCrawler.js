@@ -165,33 +165,41 @@ class WeiboUserCrawler extends WeiboCrawler {
             fs.mkdirSync(postDir, { recursive: true });
 
             if (post.images.length > 0) {
-                const downloadedImages = [];
-                const ocrResults = [];
-                for (let i = 0; i < post.images.length; i++) {
-                    try {
-                        const imgUrl = post.images[i];
-                        const imgPath = path.join(postDir, `image_${i + 1}.jpg`);
-                        await this.downloadImage(imgUrl, imgPath);
-                        downloadedImages.push(path.relative(taskDir, imgPath));
+                if (!this.noImage) {
+                    // 只有在noImage为false时才下载图片和执行OCR
+                    const downloadedImages = [];
+                    const ocrResults = [];
+                    for (let i = 0; i < post.images.length; i++) {
+                        try {
+                            const imgUrl = post.images[i];
+                            const imgPath = path.join(postDir, `image_${i + 1}.jpg`);
+                            await this.downloadImage(imgUrl, imgPath);
+                            downloadedImages.push(path.relative(taskDir, imgPath));
 
-                        // Perform OCR if noImage is false
-                        if (!this.noImage) {
-                            const ocrText = await OCRProcessor.extractTextFromImage(imgPath);
+                            // 执行OCR处理
+                            const ocrText = await OCRProcessor.extractTextFromImage(imgPath, this.noImage);
                             if (ocrText) {
                                 ocrResults.push({
                                     image: path.relative(taskDir, imgPath),
                                     text: ocrText
                                 });
                             }
+                        } catch (error) {
+                            console.error(`下载图片失败: ${error.message}`);
                         }
-                    } catch (error) {
-                        console.error(`下载图片失败: ${error.message}`);
                     }
+                    post.images = downloadedImages;
+                    if (ocrResults.length > 0) {
+                        post.ocr_results = ocrResults;
+                    }
+                } else {
+                    // 当noImage为true时，只保存图片URL，不下载也不执行OCR
+                    console.log('noImage为true，跳过图片下载和OCR处理');
+                    post.images = post.images.map(url => url);
                 }
-                post.images = downloadedImages;
-                if (!this.noImage && ocrResults.length > 0) {
-                    post.ocr_results = ocrResults;
-                }
+            } else {
+                // 如果noImage为true，只保存图片URL
+                post.images = post.images.map(url => url);
             }
 
             fs.writeFileSync(
@@ -311,7 +319,7 @@ class WeiboUserCrawler extends WeiboCrawler {
             const now = new Date();
             const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}`;
             const taskFolderName = `${userInfo.name || userId}_${dateStr}`;
-            const taskDir = path.join(process.cwd(), 'data', taskFolderName);
+            const taskDir = path.join(process.cwd(), 'data', 'weibo', taskFolderName);
             fs.mkdirSync(taskDir, { recursive: true });
 
             // 处理历史记录
@@ -410,6 +418,11 @@ class WeiboUserCrawler extends WeiboCrawler {
             // 合并内容并处理导出
             const mergedFile = path.join(taskDir, `${taskFolderName}.txt`);
             fs.writeFileSync(mergedFile, JSON.stringify(posts, null, 2));
+
+            // 生成URL合并文件
+            const urlOnlyData = posts.map(post => post.postUrl).filter(url => url);
+            const urlFile = path.join(taskDir, `${taskFolderName}_urls.txt`);
+            fs.writeFileSync(urlFile, JSON.stringify(urlOnlyData, null, 2));
 
             // 导出到指定目录
             if (task.export) {

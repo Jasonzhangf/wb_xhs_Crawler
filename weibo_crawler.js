@@ -50,9 +50,29 @@ async function processWeiboKeywordTask(task, weiboFS) {
         
         const now = new Date();
         const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}`;
-        const taskFolderName = `${keywordToUse}_${dateStr}_${weiboConfig.MAX_ITEMS}条`;
-        const taskDir = path.join(__dirname, 'data', taskFolderName);
+        const maxItems = task.max_items || weiboConfig.MAX_ITEMS;
+        const taskFolderName = `keyword_${keywordToUse}_${dateStr}_${maxItems}`;
+        const taskDir = path.join(__dirname, 'data', 'weibo', taskFolderName);
         weiboFS.ensureDir(taskDir);
+        
+        // 初始化历史记录文件
+        const historyFile = path.join(taskDir, 'history.json');
+        let history = [];
+        if (fs.existsSync(historyFile)) {
+            try {
+                history = JSON.parse(fs.readFileSync(historyFile, 'utf8'));
+                // 验证历史记录中的文件夹和JSON文件是否存在
+                history = history.filter(item => {
+                    const contentFile = path.join(item.folderPath, 'content.json');
+                    return fs.existsSync(item.folderPath) && fs.existsSync(contentFile) &&
+                           fs.statSync(contentFile).size > 0;
+                });
+            } catch (error) {
+                console.error(`读取历史记录失败: ${error.message}`);
+                history = [];
+            }
+        }
+        fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
         
         // 确保历史记录保存在任务文件夹下，而不是项目根目录
         // 使用WeiboFileSystem类的方法加载特定任务的历史记录
@@ -259,21 +279,39 @@ async function processWeiboKeywordTask(task, weiboFS) {
             }
         }
         
+        // 合并所有内容到一个文件
         const mergedData = [];
+        const urlOnlyData = [];
         for (const item of history) {
             try {
                 const contentFile = path.join(item.folderPath, 'content.json');
                 if (fs.existsSync(contentFile)) {
                     const content = JSON.parse(fs.readFileSync(contentFile, 'utf8'));
                     mergedData.push(content);
+                    // 只收集URL信息
+                    if (content.postUrl) {
+                        urlOnlyData.push({
+                            url: content.postUrl,
+                            publishTime: content.publishTime || '',
+                            folderPath: item.folderPath
+                        });
+                    }
                 }
             } catch (e) {
                 console.error(`读取内容文件失败: ${e.message}`);
             }
         }
         
-        const mergedFile = path.join(taskDir, `${taskFolderName}.txt`);
+        // 保存完整内容文件
+        const mergedFile = path.join(taskDir, `${taskFolderName}_full.json`);
         fs.writeFileSync(mergedFile, JSON.stringify(mergedData, null, 2));
+        
+        // 保存仅URL的文件
+        const urlOnlyFile = path.join(taskDir, `${taskFolderName}_urls.json`);
+        fs.writeFileSync(urlOnlyFile, JSON.stringify(urlOnlyData, null, 2));
+        
+        // 更新历史记录
+        fs.writeFileSync(historyFile, JSON.stringify(urlOnlyData, null, 2));
         
         if (task.export) {
             const exportDir = typeof task.export === 'string' ? task.export : path.join(__dirname, 'export');

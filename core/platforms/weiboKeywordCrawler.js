@@ -1,15 +1,22 @@
 const WeiboCrawler = require('./weiboCrawler');
 const fs = require('fs');
 const path = require('path');
-const fetch = require('node-fetch');
 
 class WeiboKeywordCrawler extends WeiboCrawler {
     constructor(options = {}) {
+        console.log('WeiboKeywordCrawler constructor received options:', JSON.stringify(options));
         super(options);
+        this.noImage = options.noImage || false;
+        console.log(`WeiboKeywordCrawler constructor: this.noImage = ${this.noImage}`);
     }
 
     async processTask(task) {
         try {
+            console.log('processTask started with task:', JSON.stringify(task));
+            // 从task中获取noimage参数
+            this.noImage = task.noimage !== undefined ? task.noimage : this.noImage;
+            console.log('Current this.noImage value:', this.noImage);
+            
             const keyword = task.keyword;
             if (!keyword) {
                 throw new Error('未提供搜索关键词');
@@ -18,8 +25,9 @@ class WeiboKeywordCrawler extends WeiboCrawler {
             // 创建任务目录
             const now = new Date();
             const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}`;
-            const taskFolderName = `keyword_${keyword}_${dateStr}`;
-            const taskDir = path.join(process.cwd(), 'data', taskFolderName);
+            const maxItems = task.max_items || this.maxItems;
+            const taskFolderName = `keyword_${keyword}_${dateStr}_${maxItems}`;
+            const taskDir = path.join(process.cwd(), 'data', 'weibo', taskFolderName);
             if (!fs.existsSync(taskDir)) {
                 fs.mkdirSync(taskDir, { recursive: true });
             }
@@ -34,7 +42,6 @@ class WeiboKeywordCrawler extends WeiboCrawler {
             await this.wait(3000);
 
             let processedCount = 0;
-            const maxItems = task.max_items || this.maxItems;
             const posts = [];
 
             let pageNum = 1;
@@ -92,22 +99,8 @@ class WeiboKeywordCrawler extends WeiboCrawler {
                         fs.mkdirSync(postDir);
                     }
 
-                    // 下载图片
-                    if (!this.noImage) {
-                        for (let i = 0; i < post.images.length; i++) {
-                            try {
-                                const imgUrl = post.images[i];
-                                const imgPath = path.join(postDir, `image_${i + 1}.jpg`);
-                                const response = await fetch(imgUrl);
-                                if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
-                                const buffer = await response.buffer();
-                                fs.writeFileSync(imgPath, buffer);
-                                post.images[i] = path.relative(taskDir, imgPath);
-                            } catch (error) {
-                                console.error(`下载图片失败: ${error.message}`);
-                            }
-                        }
-                    }
+                    // 处理图片和OCR
+                    await this.processImages(post, postDir, taskDir);
 
                     // 保存微博数据
                     fs.writeFileSync(
@@ -136,6 +129,11 @@ class WeiboKeywordCrawler extends WeiboCrawler {
             // 保存所有微博数据
             const mergedFile = path.join(taskDir, `${taskFolderName}.txt`);
             fs.writeFileSync(mergedFile, JSON.stringify(posts, null, 2));
+
+            // 生成URL合并文件
+            const urlOnlyData = posts.map(post => post.postUrl).filter(url => url);
+            const urlFile = path.join(taskDir, `${taskFolderName}_urls.txt`);
+            fs.writeFileSync(urlFile, JSON.stringify(urlOnlyData, null, 2));
 
             // 导出到指定目录
             if (task.export) {

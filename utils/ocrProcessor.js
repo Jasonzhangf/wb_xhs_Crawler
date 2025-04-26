@@ -3,21 +3,21 @@ const { spawn } = require('child_process');
 
 class OCRProcessor {
     static async extractTextFromImage(imagePath, noimage = false) {
-        // noimage参数仅用于控制是否执行OCR，不影响图片的获取和保存
+        // 如果noimage为true，直接返回null，不执行任何OCR相关操作
+        if (noimage) {
+            console.log('noimage为true，跳过OCR处理');
+            return null;
+        }
+
         return new Promise((resolve, reject) => {
-            if (noimage) {
-                console.log('OCR处理已跳过（noimage=true）');
-                resolve('');
-                return;
-            }
             // 检查文件是否存在
             if (!require('fs').existsSync(imagePath)) {
                 console.error(`OCR处理失败: 图片文件不存在 ${imagePath}`);
                 resolve('');
                 return;
             }
+
             // 确保路径使用正确的分隔符
-            // 处理相对路径和绝对路径
             const normalizedPath = imagePath.replace(/\\/g, '/');
             // 检查路径是否为相对路径（以data/开头）
             const absolutePath = normalizedPath.startsWith('data/') 
@@ -91,7 +91,7 @@ try:
     
     text_parts = [item[1] for item in result if item and len(item) > 1]
     if text_parts:
-        text = "\\n".join(text_parts)
+        text = ' '.join(text_parts)  # Using space instead of newline for safer text handling
         print(json.dumps({"text": text, "debug": f"成功识别 {len(text_parts)} 个文本区域"}))
         sys.exit(0)
     else:

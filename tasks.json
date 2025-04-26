@@ -1,24 +1,18 @@
 {
   "tasks": [
-    {
-      "type": "xhs_keyword",
-      "keyword": "mcp",
-      "max_items":10,
-      "noimage": true,
-      "export": ".\\总结"
-    },
+  
     {
       "type": "wb_keyword",
-      "keyword": "mcp",
+      "keyword": "大模型",
       "max_items": 10,
       "noimage": true,
       "export": ".\\总结"
     },  
     {
       "type": "wb_user",
-      "url": "www.weibo.com",
+      "url": "https://weibo.com/u/1671109627",
       "max_items": 10,
-      "noimage": true,
+      "noimage": false,
       "export": ".\\总结"
     }
   ]

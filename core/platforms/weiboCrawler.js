@@ -1,6 +1,8 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
+const fetch = require('node-fetch');
+const OCRProcessor = require('../../utils/ocrProcessor');
 
 class WeiboCrawler {
     constructor(options = {}) {
@@ -64,6 +66,45 @@ class WeiboCrawler {
 
     async wait(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async processImages(post, postDir, taskDir) {
+        if (!post.images || post.images.length === 0) return;
+
+        if (!this.noImage) {
+            const downloadedImages = [];
+            const ocrResults = [];
+            
+            for (let i = 0; i < post.images.length; i++) {
+                try {
+                    const imgUrl = post.images[i];
+                    const imgPath = path.join(postDir, `image_${i + 1}.jpg`);
+                    const response = await fetch(imgUrl);
+                    if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+                    const buffer = await response.buffer();
+                    fs.writeFileSync(imgPath, buffer);
+                    downloadedImages.push(path.relative(taskDir, imgPath));
+
+                    const ocrText = await OCRProcessor.extractTextFromImage(imgPath, this.noImage);
+                    if (ocrText) {
+                        ocrResults.push({
+                            image: path.relative(taskDir, imgPath),
+                            text: ocrText
+                        });
+                    }
+                } catch (error) {
+                    console.error(`Failed to download image: ${error.message}`);
+                }
+            }
+            
+            post.images = downloadedImages;
+            if (ocrResults.length > 0) {
+                post.ocr_results = ocrResults;
+            }
+        } else {
+            console.log('noImage is true, skipping image download and OCR processing');
+            post.images = post.images.map(url => url);
+        }
     }
 
     async processTask(task) {
