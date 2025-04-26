@@ -2,6 +2,7 @@ const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+const BrowserConfig = require('./utils/browser/browserConfig');
 const { spawn } = require('child_process');
 
 // 计算URL的哈希值
@@ -122,12 +123,9 @@ if (!fs.existsSync(DATA_DIR)) {
 
 (async () => {
     
-    const browser = await puppeteer.launch({
-        headless: false,
-        args: ['--no-sandbox', '--window-size=1400,900'],
-        channel: 'chrome',
-        executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-    });
+    const browser = await puppeteer.launch(BrowserConfig.getDefaultConfig({
+        args: [...BrowserConfig.getDefaultConfig().args, '--window-size=1400,900']
+    }));
     const pages = await browser.pages();
     const page = pages[0];
     await page.setViewport({ width: 1400, height: 900 });

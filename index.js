@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const puppeteer = require('puppeteer-core');
+const BrowserConfig = require('./utils/browser/browserConfig');
 
 let mainWindow;
 
@@ -47,12 +48,7 @@ app.on('window-all-closed', () => {
 async function validateCookie(platform, cookiePath) {
   try {
     const cookies = JSON.parse(fs.readFileSync(cookiePath, 'utf-8'));
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox'],
-      channel: 'chrome',
-      executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-    });
+    const browser = await puppeteer.launch(BrowserConfig.getDefaultConfig({ headless: true }));
 
     const page = await browser.newPage();
     for (const cookie of cookies) {

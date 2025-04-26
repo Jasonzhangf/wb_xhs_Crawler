@@ -1,7 +1,8 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs');
 const readline = require('readline');
+const BrowserConfig = require('./utils/browser/browserConfig');
 
 // 配置项
 const singleFileExtensionPath = path.resolve(__dirname, 'SingleFile'); // SingleFile插件目录
@@ -65,91 +66,117 @@ async function loadCookies(page) {
 
 // 保存页面
 async function savePageWithSingleFile(url, outputPath) {
-    try {
-        if (!browser) {
-            // 启动浏览器并加载SingleFile插件
-            browser = await puppeteer.launch({
-                headless: false,
-                args: [
-                    `--load-extension=${singleFileExtensionPath}`,
-                    `--disable-extensions-except=${singleFileExtensionPath}`,
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox'
-                ]
-            });
-            
-            // 等待用户手动启用插件
-            await waitForUserConfirmation('请在浏览器中手动启用SingleFile插件，然后按回车继续...');
-        }
+    const maxRetries = 3;
+    let retryCount = 0;
+    let page = null;
 
-        const page = await browser.newPage();
-        
-        // 加载cookie
-        await loadCookies(page);
+    while (retryCount < maxRetries) {
+        try {
+            if (!browser) {
+                // 启动浏览器并加载SingleFile插件
+                browser = await puppeteer.launch(BrowserConfig.getSingleFileConfig(singleFileExtensionPath));
+                
+                // 等待插件加载
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                
+                // 获取或创建页面
+                page = (await browser.pages())[0] || await browser.newPage();
+                
+                // 加载cookie
+                await loadCookies(page);
 
-        // 设置下载行为
-        const client = await page.target().createCDPSession();
-        await client.send('Page.setDownloadBehavior', {
-            behavior: 'allow',
-            downloadPath: path.dirname(outputPath)
-        });
-        console.log(`下载路径设置为: ${path.dirname(outputPath)}`);
-
-        // 监听下载事件
-        let downloadCompletePromise = new Promise((resolve, reject) => {
-            page.on('response', async response => {
-                const headers = response.headers();
-                if (headers['content-disposition']?.includes('attachment')) {
-                    try {
-                        const buffer = await response.buffer();
-                        fs.writeFileSync(outputPath, buffer);
-                        console.log(`文件已保存到: ${outputPath}`);
-                        resolve();
-                    } catch (error) {
-                        console.error(`处理下载时发生错误: ${error}`);
-                        reject(error);
+                // 等待并检查SingleFile API是否可用
+                console.log('等待SingleFile API加载...');
+                let apiCheckAttempts = 0;
+                const maxApiCheckAttempts = 10;
+                
+                while (apiCheckAttempts < maxApiCheckAttempts) {
+                    const apiAvailable = await page.evaluate(() => {
+                        return typeof window.SingleFile !== 'undefined' && 
+                               typeof window.SingleFile.save === 'function';
+                    }).catch(() => false);
+                    
+                    if (apiAvailable) {
+                        console.log('SingleFile API 已加载完成');
+                        break;
+                    }
+                    
+                    console.log(`等待SingleFile API (${apiCheckAttempts + 1}/${maxApiCheckAttempts})...`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    apiCheckAttempts++;
+                    
+                    if (apiCheckAttempts === maxApiCheckAttempts) {
+                        throw new Error('SingleFile API 加载超时');
                     }
                 }
-            });
-        });
-
-        // 导航到目标URL
-        console.log(`正在访问: ${url}`);
-        await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
-        console.log('页面加载完成');
-
-        // 等待SingleFile插件加载完成
-        console.log('等待SingleFile插件加载...');
-        await page.waitForFunction(() => {
-            return window.singlefile && window.singlefile.savePage;
-        }, { timeout: 10000 }).catch(() => {
-            throw new Error('SingleFile插件加载超时');
-        });
-
-        // 调用SingleFile插件保存页面
-        console.log('正在调用SingleFile保存页面...');
-        await page.evaluate(async (saveOptions) => {
-            try {
-                await window.singlefile.savePage(saveOptions);
-            } catch (error) {
-                throw new Error(`SingleFile保存失败: ${error.message}`);
+            } else {
+                // 重用现有页面
+                page = (await browser.pages())[0] || await browser.newPage();
             }
-        }, { filename: path.basename(outputPath), url: url });
 
-        console.log('等待下载完成...');
-        await downloadCompletePromise;
-        console.log('页面保存完成');
+            // 设置下载行为
+            const client = await page.target().createCDPSession();
+            await client.send('Page.setDownloadBehavior', {
+                behavior: 'allow',
+                downloadPath: path.dirname(outputPath)
+            });
+            console.log(`下载路径设置为: ${path.dirname(outputPath)}`);
 
-    } catch (error) {
-        console.error(`保存页面时出错: ${error}`);
-        throw error;
-    } catch (error) {
-        console.error(`保存页面时出错: ${error}`);
-        throw error;
+            // 导航到目标URL
+            console.log(`正在访问: ${url}`);
+            await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+            console.log('页面加载完成');
+
+            // 等待页面稳定
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            // 调用SingleFile插件保存页面
+            console.log('正在调用SingleFile保存页面...');
+            await page.evaluate(async (outputPath) => {
+                try {
+                    const options = {
+                        removeHiddenElements: false,
+                        removeUnusedStyles: false,
+                        removeUnusedFonts: false,
+                        removeFrames: false,
+                        compressHTML: false,
+                        filename: outputPath
+                    };
+                    await window.SingleFile.save(options);
+                } catch (error) {
+                    throw new Error(`SingleFile保存失败: ${error.message}`);
+                }
+            }, path.basename(outputPath));
+
+            // 等待文件下载完成
+            const checkFile = () => fs.existsSync(outputPath);
+            let attempts = 0;
+            const maxAttempts = 60; // 等待最多60秒
+            while (!checkFile() && attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                attempts++;
+            }
+
+            if (!checkFile()) {
+                throw new Error('文件下载超时');
+            }
+
+            console.log(`文件已保存到: ${outputPath}`);
+            return; // 成功后退出函数
+
+        } catch (error) {
+            console.error(`保存页面时出错 (尝试 ${retryCount + 1}/${maxRetries}): ${error}`);
+            retryCount++;
+            
+            if (retryCount < maxRetries) {
+                console.log(`等待5秒后重试...`);
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            } else {
+                throw error; // 最后一次尝试失败时抛出错误
+            }
+        }
     }
 }
-}
-
 // 主函数
 async function main() {
     try {

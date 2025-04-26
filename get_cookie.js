@@ -1,6 +1,7 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const fs = require('fs');
 const path = require('path');
+const BrowserConfig = require('./utils/browser/browserConfig');
 
 async function saveCookies(page, filename) {
     const cookies = await page.cookies();
@@ -9,10 +10,7 @@ async function saveCookies(page, filename) {
 }
 
 async function getXiaohongshuCookies() {
-    const browser = await puppeteer.launch({
-        headless: false,
-        args: ['--disable-blink-features=AutomationControlled']
-    });
+    const browser = await puppeteer.launch(BrowserConfig.getDefaultConfig());
     const page = await browser.newPage();
     
     await page.evaluateOnNewDocument(() => {
@@ -30,10 +28,7 @@ async function getXiaohongshuCookies() {
 }
 
 async function getWeiboCookies() {
-    const browser = await puppeteer.launch({
-        headless: false,
-        args: ['--disable-blink-features=AutomationControlled']
-    });
+    const browser = await puppeteer.launch(BrowserConfig.getDefaultConfig());
     const page = await browser.newPage();
     
     await page.evaluateOnNewDocument(() => {

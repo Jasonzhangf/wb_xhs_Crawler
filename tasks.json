@@ -2,7 +2,7 @@
   "tasks": [
   
     {
-      "type": "wb_keyword",
+      "type": "xhs_keyword",
       "keyword": "大模型",
       "max_items": 10,
       "noimage": true,
@@ -12,7 +12,7 @@
       "type": "wb_user",
       "url": "https://weibo.com/u/1671109627",
       "max_items": 10,
-      "noimage": false,
+      "noimage": true,
       "export": ".\\总结"
     }
   ]
