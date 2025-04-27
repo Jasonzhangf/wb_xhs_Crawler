@@ -3,11 +3,13 @@ const { spawn } = require('child_process');
 
 class OCRProcessor {
     static async extractTextFromImage(imagePath, noimage = false) {
+        //console.log(`[OCRProcessor] extractTextFromImage called with noimage=${noimage}, imagePath=${imagePath}`);
         // 如果noimage为true，直接返回null，不执行任何OCR相关操作
         if (noimage) {
-            console.log('noimage为true，跳过OCR处理');
+           // console.log('[OCRProcessor] noimage is true, skipping OCR processing');
             return null;
         }
+        console.log('[OCRProcessor] noimage is false, proceeding with OCR processing');
 
         return new Promise((resolve, reject) => {
             // 检查文件是否存在

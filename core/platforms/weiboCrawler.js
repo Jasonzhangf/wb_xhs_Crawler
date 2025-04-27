@@ -102,7 +102,6 @@ class WeiboCrawler {
                 post.ocr_results = ocrResults;
             }
         } else {
-            console.log('noImage is true, skipping image download and OCR processing');
             post.images = post.images.map(url => url);
         }
     }

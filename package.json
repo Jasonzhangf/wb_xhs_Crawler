@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "electron": "^35.2.1",
     "minimist": "^1.2.8",
     "node-fetch": "^2.7.0",
     "puppeteer": "^24.7.2",

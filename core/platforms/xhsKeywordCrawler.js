@@ -29,6 +29,7 @@ class XhsCrawler {
         this.browser.scrolling = null;
         this.visibleMode = options.visibleMode || false;
         this.processedPostUrls = new Set();
+        this.noNewContentRetries = 0;
     }
 
     async randomWait(min = MIN_WAIT_TIME, max = MAX_WAIT_TIME) {
@@ -340,6 +341,18 @@ class XhsCrawler {
                             allVisibleProcessed = false;
                             break;
                         }
+                    }
+                    
+                    // 检查连续无新内容的次数
+                    if (allVisibleProcessed) {
+                        this.noNewContentRetries++;
+                        console.log(`未发现新内容，等待加载... (${this.noNewContentRetries}/5)`);
+                        if (this.noNewContentRetries >= 5) {
+                            console.log('连续5次未发现新内容，提前结束任务');
+                            break;
+                        }
+                    } else {
+                        this.noNewContentRetries = 0;
                     }
 
                     if (allVisibleProcessed && visibleHandles.length > 0) {

@@ -14,6 +14,7 @@ class Crawler {
             noImage: false,
             ...options
         };
+        console.log(`[Crawler] Constructor - Initial options:`, this.options);
         
         // 解析命令行参数
         this.argv = minimist(process.argv.slice(2));
@@ -48,7 +49,9 @@ class Crawler {
     loadTasks(inputFile) {
         try {
             const tasksData = JSON.parse(fs.readFileSync(inputFile, 'utf8'));
-            return tasksData.tasks || [];
+            const tasks = tasksData.tasks || [];
+            console.log(`[Crawler] loadTasks - 从文件加载的任务配置:`, tasks);
+            return tasks;
         } catch (error) {
             console.error(`加载任务配置失败: ${error.message}`);
             return [];

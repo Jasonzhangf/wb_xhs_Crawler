@@ -1,0 +1,11 @@
+{
+  "tasks": [
+    {
+      "type": "wb_user",
+      "url": "https://weibo.com/u/5648162302",
+      "max_items": 5,
+      "noimage": true,
+      "export": ".\\总结"
+    }
+  ]
+}

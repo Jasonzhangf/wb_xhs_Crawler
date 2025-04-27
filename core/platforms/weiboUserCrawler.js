@@ -10,7 +10,7 @@ class WeiboUserCrawler extends WeiboCrawler {
         this.processedUrls = new Set();
         this.lastScrollPosition = 0;
         this.lastElementCount = 0;
-        this.noImage = options.noImage || false;
+        this.noImage = options.noImage || (options.task && options.task.noimage) || false;
     }
 
     async setupViewport() {
@@ -165,37 +165,29 @@ class WeiboUserCrawler extends WeiboCrawler {
             fs.mkdirSync(postDir, { recursive: true });
 
             if (post.images.length > 0) {
-                if (!this.noImage) {
-                    // 只有在noImage为false时才下载图片和执行OCR
-                    const downloadedImages = [];
-                    const ocrResults = [];
-                    for (let i = 0; i < post.images.length; i++) {
-                        try {
-                            const imgUrl = post.images[i];
-                            const imgPath = path.join(postDir, `image_${i + 1}.jpg`);
-                            await this.downloadImage(imgUrl, imgPath);
-                            downloadedImages.push(path.relative(taskDir, imgPath));
+                const downloadedImages = [];
+                const ocrResults = [];
+                for (let i = 0; i < post.images.length; i++) {
+                    try {
+                        const imgUrl = post.images[i];
+                        const imgPath = path.join(postDir, `image_${i + 1}.jpg`);
+                        await this.downloadImage(imgUrl, imgPath);
+                        downloadedImages.push(path.relative(taskDir, imgPath));
 
-                            // 执行OCR处理
-                            const ocrText = await OCRProcessor.extractTextFromImage(imgPath, this.noImage);
-                            if (ocrText) {
-                                ocrResults.push({
-                                    image: path.relative(taskDir, imgPath),
-                                    text: ocrText
-                                });
-                            }
-                        } catch (error) {
-                            console.error(`下载图片失败: ${error.message}`);
+                        const ocrText = await OCRProcessor.extractTextFromImage(imgPath, this.noImage);
+                        if (ocrText) {
+                            ocrResults.push({
+                                image: path.relative(taskDir, imgPath),
+                                text: ocrText
+                            });
                         }
+                    } catch (error) {
+                        console.error(`下载图片失败: ${error.message}`);
                     }
-                    post.images = downloadedImages;
-                    if (ocrResults.length > 0) {
-                        post.ocr_results = ocrResults;
-                    }
-                } else {
-                    // 当noImage为true时，只保存图片URL，不下载也不执行OCR
-                    console.log('noImage为true，跳过图片下载和OCR处理');
-                    post.images = post.images.map(url => url);
+                }
+                post.images = downloadedImages;
+                if (ocrResults.length > 0) {
+                    post.ocr_results = ocrResults;
                 }
             } else {
                 // 如果noImage为true，只保存图片URL
@@ -236,9 +228,12 @@ class WeiboUserCrawler extends WeiboCrawler {
 
     async processTask(task) {
         try {
+            console.log(`[WeiboUserCrawler] processTask - Task配置:`, task);
+            this.noImage = task.noimage || false;
+            console.log(`[WeiboUserCrawler] processTask - noImage值: ${this.noImage}`);
             let userId = task.user_id;
+
             let isHomePage = false;
-            
             if (!userId && task.url) {
                 // Normalize URL by adding protocol if missing
                 let normalizedUrl = task.url;
@@ -353,7 +348,7 @@ class WeiboUserCrawler extends WeiboCrawler {
             const maxItems = task.max_items || this.maxItems;
             const posts = [];
             let noNewContentRetries = 0;
-            const maxNoNewContentRetries = 5;
+            const maxNoNewContentRetries = 5; // 连续无新内容的最大重试次数
 
             while (processedCount < maxItems && noNewContentRetries < maxNoNewContentRetries) {
                 const pageState = await this.observePage();
@@ -373,25 +368,31 @@ class WeiboUserCrawler extends WeiboCrawler {
                     }
                 }
 
-                // 更新元素计数并检查是否有新内容
-                if (!pageState.hasNewContent) {
-                    noNewContentRetries++;
-                    console.log(`未找到新内容，等待加载... (${noNewContentRetries}/${maxNoNewContentRetries})`);
-                    await this.wait(2000); // Reduced wait time
-                } else {
-                    noNewContentRetries = 0;
+                // 检查页面底部元素是否出现
+                const isAtBottom = await this.page.evaluate(() => {
+                    const bottomElement = document.querySelector('.Bottom_text_1kG5-');
+                    return bottomElement !== null && bottomElement.offsetParent !== null;
+                });
+
+                if (isAtBottom) {
+                    console.log('检测到页面底部元素，停止爬取');
+                    break;
                 }
-                this.lastElementCount = pageState.currentElementCount;
 
                 // 尝试滚动加载更多内容
                 const canScroll = await this.scrollPage();
-                if (!canScroll && !pageState.hasNewContent) {
-                    console.log('已到达页面底部且无新内容');
+                if (!canScroll) {
+                    noNewContentRetries++;
+                    console.log(`无法继续滚动，等待加载... (${noNewContentRetries}/${maxNoNewContentRetries})`);
                     if (noNewContentRetries >= maxNoNewContentRetries) {
                         console.log('达到最大重试次数，停止爬取');
                         break;
                     }
+                    await this.wait(2000);
+                } else {
+                    noNewContentRetries = 0;
                 }
+                this.lastElementCount = pageState.currentElementCount;
             }
 
             // 保存用户信息和所有微博

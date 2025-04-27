@@ -4,18 +4,13 @@ const path = require('path');
 
 class WeiboKeywordCrawler extends WeiboCrawler {
     constructor(options = {}) {
-        console.log('WeiboKeywordCrawler constructor received options:', JSON.stringify(options));
         super(options);
         this.noImage = options.noImage || false;
-        console.log(`WeiboKeywordCrawler constructor: this.noImage = ${this.noImage}`);
     }
 
     async processTask(task) {
         try {
-            console.log('processTask started with task:', JSON.stringify(task));
-            // 从task中获取noimage参数
             this.noImage = task.noimage !== undefined ? task.noimage : this.noImage;
-            console.log('Current this.noImage value:', this.noImage);
             
             const keyword = task.keyword;
             if (!keyword) {
@@ -78,11 +73,12 @@ class WeiboKeywordCrawler extends WeiboCrawler {
                     });
                 });
 
-                // Check if we're getting new posts
+                // 检查是否获取到新的帖子
                 if (newPosts.length === lastPostCount) {
                     noNewPosts++;
-                    if (noNewPosts >= 3) {
-                        console.log('No new posts found after 3 attempts, stopping crawl');
+                    console.log(`未发现新内容，等待加载... (${noNewPosts}/5)`);
+                    if (noNewPosts >= 5) {
+                        console.log('连续5次未发现新内容，提前结束任务');
                         break;
                     }
                 } else {
