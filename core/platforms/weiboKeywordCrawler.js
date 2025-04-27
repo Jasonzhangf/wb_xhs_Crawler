@@ -1,11 +1,13 @@
 const WeiboCrawler = require('./weiboCrawler');
 const fs = require('fs');
 const path = require('path');
+const TaskManager = require('../../utils/taskManager');
 
 class WeiboKeywordCrawler extends WeiboCrawler {
     constructor(options = {}) {
         super(options);
         this.noImage = options.noImage || false;
+        this.taskManager = new TaskManager();
     }
 
     async processTask(task) {
@@ -17,15 +19,19 @@ class WeiboKeywordCrawler extends WeiboCrawler {
                 throw new Error('未提供搜索关键词');
             }
 
-            // 创建任务目录
-            const now = new Date();
-            const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}`;
-            const maxItems = task.max_items || this.maxItems;
-            const taskFolderName = `keyword_${keyword}_${dateStr}_${maxItems}`;
-            const taskDir = path.join(process.cwd(), 'data', 'weibo', taskFolderName);
-            if (!fs.existsSync(taskDir)) {
-                fs.mkdirSync(taskDir, { recursive: true });
+            // 生成并创建任务目录
+            const taskFolderName = this.taskManager.generateTaskFolderName('weibo', task);
+            
+            // 检查任务是否已存在
+            if (this.taskManager.checkTaskExists('weibo', taskFolderName)) {
+                console.log(`任务 ${taskFolderName} 已存在，验证历史记录...`);
+                const taskDir = path.join(process.cwd(), 'data', 'weibo', taskFolderName);
+                const history = this.taskManager.verifyHistory(taskDir);
+                this.processedUrls = new Set(history.urls);
+                return;
             }
+            
+            const taskDir = this.taskManager.createTaskDirectory('weibo', taskFolderName);
 
             // 构建搜索URL，使用最近3天的时间范围
             const endDate = new Date();
@@ -90,7 +96,8 @@ class WeiboKeywordCrawler extends WeiboCrawler {
                     if (processedCount >= maxItems) break;
 
                     // 保存微博内容
-                    const postDir = path.join(taskDir, `post_${processedCount + 1}`);
+                    const nextIndex = this.taskManager.getNextFolderIndex(taskDir);
+                    const postDir = path.join(taskDir, `post_${nextIndex}`);
                     if (!fs.existsSync(postDir)) {
                         fs.mkdirSync(postDir);
                     }
@@ -122,9 +129,10 @@ class WeiboKeywordCrawler extends WeiboCrawler {
                 await this.wait(3000); // Wait for page load
             }
 
-            // 保存所有微博数据
+            // 合并所有微博数据
+            const allPosts = this.taskManager.mergeJsonFiles(taskDir);
             const mergedFile = path.join(taskDir, `${taskFolderName}.txt`);
-            fs.writeFileSync(mergedFile, JSON.stringify(posts, null, 2));
+            fs.writeFileSync(mergedFile, JSON.stringify(allPosts, null, 2));
 
             // 生成URL合并文件
             const urlOnlyData = posts.map(post => post.postUrl).filter(url => url);

@@ -155,7 +155,7 @@ class XhsCrawler {
                 return;
             }
             console.log('成功点击图片入口，等待帖子列表加载...');
-            await this.randomWait(3000, 5000);
+            await this.randomWait(1000, 3000);
 
             let processedCount = 0;
             const maxItems = task.max_items || 10;
@@ -258,7 +258,7 @@ class XhsCrawler {
                             return imgs.map(img => img.src).filter(src => src && src.startsWith('http'));
                         }, POST_DETAIL_IMAGE_SELECTOR);
 
-                        if (!task.noimage && imageUrls.length > 0) {
+                        if (imageUrls.length > 0) {
                             console.log(`找到 ${imageUrls.length} 张图片`);
                             const seenUrls = new Set();
                             const uniqueImageUrls = imageUrls.filter(url => {
@@ -279,14 +279,16 @@ class XhsCrawler {
                                     content.images.push(relativePath);
                                     console.log(`已下载图片: ${imgPath}`);
 
-                                    // 使用绝对路径进行OCR处理
-                                    const ocrText = await OCRProcessor.extractTextFromImage(imgPath);
-                                    if (ocrText) {
-                                        content.ocr_texts.push({
-                                            image_index: i + 1,
-                                            text: ocrText
-                                        });
-                                        console.log(`图片 ${i + 1} OCR 完成`);
+                                    // 只在noimage为false时进行OCR处理
+                                    if (!task.noimage) {
+                                        const ocrText = await OCRProcessor.extractTextFromImage(imgPath);
+                                        if (ocrText) {
+                                            content.ocr_texts.push({
+                                                image_index: i + 1,
+                                                text: ocrText
+                                            });
+                                            console.log(`图片 ${i + 1} OCR 完成`);
+                                        }
                                     }
                                 } catch (error) {
                                     console.error(`处理图片失败: ${error.message}`);

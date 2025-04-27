@@ -3,6 +3,7 @@ const fs = require('fs');
 const WeiboCrawler = require('./weiboCrawler');
 const https = require('https');
 const OCRProcessor = require('../../utils/ocrProcessor');
+const TaskManager = require('../../utils/taskManager');
 
 class WeiboUserCrawler extends WeiboCrawler {
     constructor(options = {}) {
@@ -11,6 +12,7 @@ class WeiboUserCrawler extends WeiboCrawler {
         this.lastScrollPosition = 0;
         this.lastElementCount = 0;
         this.noImage = options.noImage || (options.task && options.task.noimage) || false;
+        this.taskManager = new TaskManager();
     }
 
     async setupViewport() {
@@ -209,17 +211,20 @@ class WeiboUserCrawler extends WeiboCrawler {
 
     async scrollPage() {
         try {
-            const currentPosition = await this.page.evaluate(() => {
-                const oldPosition = window.pageYOffset;
-                window.scrollBy(0, window.innerHeight * 4); // Scroll four times the viewport height
-                return window.pageYOffset;
+            const oldPosition = await this.page.evaluate(() => window.pageYOffset);
+            await this.wait(500); // 等待页面稳定
+
+            await this.page.evaluate(() => {
+                window.scrollBy(0, window.innerHeight * 2); // 减少滚动距离以确保内容加载
             });
 
-            // Check if we can scroll further
-            const canScroll = currentPosition > this.lastScrollPosition;
-            this.lastScrollPosition = currentPosition;
-            await this.wait(300); // Further reduced wait time
-            return canScroll;
+            await this.wait(1000); // 等待滚动动画和内容加载
+
+            const newPosition = await this.page.evaluate(() => window.pageYOffset);
+            const scrollDiff = newPosition - oldPosition;
+
+            console.log(`滚动距离: ${scrollDiff}px`);
+            return scrollDiff > 10; // 只要有微小的滚动就认为是有效的
         } catch (error) {
             console.error('滚动页面时出错:', error);
             return false;
@@ -310,39 +315,21 @@ class WeiboUserCrawler extends WeiboCrawler {
                 });
             }
 
-            // 创建任务目录
-            const now = new Date();
-            const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}`;
-            const taskFolderName = `${userInfo.name || userId}_${dateStr}`;
-            const taskDir = path.join(process.cwd(), 'data', 'weibo', taskFolderName);
-            fs.mkdirSync(taskDir, { recursive: true });
+            // 生成并创建任务目录
+            const taskFolderName = this.taskManager.generateTaskFolderName('weibo', { ...task, user_id: userInfo.name || userId });
+            
+            // 检查任务是否已存在并获取任务目录
+            let taskDir;
+            if (this.taskManager.checkTaskExists('weibo', taskFolderName)) {
+                console.log(`任务 ${taskFolderName} 已存在，验证历史记录...`);
+                taskDir = path.join(process.cwd(), 'data', 'weibo', taskFolderName);
+            } else {
+                taskDir = this.taskManager.createTaskDirectory('weibo', taskFolderName);
+            }
 
             // 处理历史记录
-            const historyFile = path.join(taskDir, 'history.json');
-            if (fs.existsSync(historyFile)) {
-                const history = JSON.parse(fs.readFileSync(historyFile));
-                if (Array.isArray(history.urls)) {
-                    // Verify each URL's folder exists
-                    history.urls = history.urls.filter(url => {
-                        const postId = url.match(/\/\d+\/([A-Za-z0-9]+)/)?.[1];
-                        if (!postId) return false;
-                        const possibleDirs = fs.readdirSync(taskDir)
-                            .filter(dir => dir.startsWith('post_'))
-                            .map(dir => path.join(taskDir, dir));
-                        return possibleDirs.some(dir => {
-                            try {
-                                const content = JSON.parse(fs.readFileSync(path.join(dir, 'content.json')));
-                                return content.postUrl === url;
-                            } catch {
-                                return false;
-                            }
-                        });
-                    });
-                    history.urls.forEach(url => this.processedUrls.add(url));
-                    // Save cleaned history
-                    fs.writeFileSync(historyFile, JSON.stringify({ urls: history.urls }, null, 2));
-                }
-            }
+            const history = this.taskManager.verifyHistory(taskDir);
+            history.urls.forEach(url => this.processedUrls.add(url));
 
             let processedCount = 0;
             const maxItems = task.max_items || this.maxItems;
@@ -407,6 +394,7 @@ class WeiboUserCrawler extends WeiboCrawler {
             );
 
             // 更新历史记录
+            const historyFile = path.join(taskDir, 'history.json');
             fs.writeFileSync(
                 historyFile,
                 JSON.stringify({
