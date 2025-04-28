@@ -49,6 +49,7 @@ class WeiboKeywordCrawler extends WeiboCrawler {
             let lastPostCount = 0;
             let noNewPosts = 0;
 
+            const maxItems = task.max_items || 20; // 使用任务配置的max_items或默认值20
             while (processedCount < maxItems) {
                 console.log(`Processing page ${pageNum}, collected ${processedCount}/${maxItems} posts`);
                 
@@ -101,6 +102,10 @@ class WeiboKeywordCrawler extends WeiboCrawler {
                     if (!fs.existsSync(postDir)) {
                         fs.mkdirSync(postDir);
                     }
+
+                    // 保存页面HTML源代码
+                    const html = await this.page.content();
+                    fs.writeFileSync(path.join(postDir, 'source.html'), html);
 
                     // 处理图片和OCR
                     await this.processImages(post, postDir, taskDir);

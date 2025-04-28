@@ -1,0 +1,112 @@
+标题：AI Agent最佳实践典型案例
+正文：最佳实践1️⃣：采用大小模型协同的技术路线
+大模型擅长理解、总结和提供高层次的指导,而小模型的可解释性更强,擅长感知和执行具体的任务。在实际落地过程中,企业需要 根据任务进行适配,通过大模型、小模型甚至传统AI技术的组合,可以有效实现企业复杂场景的智能化,提高AI Agent输出结果的准  确性和可靠性,实现更高效的业务流程和决策支持。
+	
+最佳实践2️⃣：RAG技术提供额外知识来源
+大模型在处理特定领域或需要专业知识的问题时可能表现不足,  RAG技术可以提供额外的知识来源,增强知识广度和深度。对于AI     Agent的长期记忆,当前企业最常用的方式是通过RAG技术从外挂知识库中获取知识,从而提升AI Agent的答复准确率和质量;
+	
+最佳实践3️⃣：合理设计Workflow提升输出质量
+Agentic Workflow是由多个AI Agent协作和联动完成复杂任务的工作流模式,强调AI Agent之间的信息交换、分工协作、决策反馈,  甚至包括集体反思与任务调整。 Agentic Workflow是—种新型的协作系统,具有自适应、自主决策的特性,这种协作类似于—个由 多个专家组成的团队,其中每个成员都各司其职,且通过彼此的交流与反馈实现整体效能的最大化。
+Workflow的基本设计模式有4种:反思  (Reflection)、  工具调用  (tool use)、  规划  (planning)  和多智能体协作  (Multi-Agent Collaboration)  ,这四种模式旨在优化AI Agent的不同方面,从决策制定到协作,使Agent能够更准确、更高效地处理更复杂的任务。
+	
+最佳实践4️⃣：采取安全风险应对措施
+传统AI模型和应用的安全风险通常限于模型输入、模型处理和模型输出、编排层的软件漏洞以及托管框们的环境。除了这些威胁外,  AI Agent的安全风险范围扩大到了AI Agent触发和参与的—系列再件和交互中,这些通常对人类或系统操作员来说是不可见的,也无 法进行阻止,需要通过适当的安全措施进行解决。
+#大模型 #智能体 #AI智能体 #AI #最佳实践
+链接：https://www.xiaohongshu.com/explore/680a15bf000000001d00b1ba?xsec_token=ABlMQZVjCR5aXxPtQt0SOvaMwPGfd_k5VzLlQIExJkUPw=&xsec_source=pc_search&source=web_explore_feed
+---
+
+标题：AI最有可能率先落地的6大场景
+正文：AI最有可能率先落地的6大场景﻿#ai﻿ ﻿#职场﻿ ﻿#deepseek﻿ ﻿#AI工具﻿ ﻿#ai关键词﻿ ﻿#人工智能﻿ ﻿#大模型﻿ ﻿#大模型应用
+链接：https://www.xiaohongshu.com/explore/67d840b8000000001b024645?xsec_token=ABuLI7xNg8emowKWaOare-sFuTf_7ZjlqlaMLCWLG_80E=&xsec_source=pc_search&source=web_explore_feed
+---
+
+标题：X上疯传 11款最适合独立开发者的AI工具
+正文：1.Cursor
+是全栈开发最好的AI IDE
+	
+2.windsurf
+更简单、更便宜、更快的AI IDE。
+	
+3.Replit
+Agent 最适合开发移动应用。
+	
+4.v0
+是最简洁的UI组件设计AI工具。
+	
+5.boltdotnew
+是最好的微型SaaS构建AI工具。
+	
+6.lovable
+是落地页最好的选择。
+	
+7.cline
+是VS Code中最好的AI编码扩展。
+	
+8.OpenAI
+提供最好的GPT模型API。
+	
+9.vercel
+是最好的SaaS托管平台。
+	
+10.supabase
+是最好的数据库和存储提供商。
+	
+11.deepseek
+拥有最好的开源模型。
+#独立开发 #ai #cursor #AI工具 #ai工具
+链接：https://www.xiaohongshu.com/explore/68065008000000001c01173c?xsec_token=ABWp45mqJvLzvDjAwxNHHJ0eR4PMVQTTpp3UEpuOrPyAU=&xsec_source=pc_search&source=web_explore_feed
+---
+
+标题：AI应用落地方向：小B大C
+正文：从具体落地角度，过去两年大家探索出来了一个最共识的方向，也是目前最能落地的方向就是生产力工具类产品。
+这是过去一年火起来的一个概念，即 Prosumer 或 Pro C 人群，或者也可以说是小 B 大 C 的这么一群人，比如专业的视频创作者、歌曲创作者、保险经纪人、券商从业者等等（甚至也包括 AI Coding 的工程师群体），这里的核心原因是：
+1）过去五到十年，国内市场似乎验证得到了一条结论，即国内 to 大 B 的市场就是不行，做不出来，这里的问题原因有很多，核心的几条就是人均 GDP 低、人的成本低、以及产业结构和美国不同，美国头部企业都是私企，而国内都是国企，所以最后利润都被渠道赚走了。
+2）大 B 不行，纯 C 好像暂时也不行，其中最核心的一个原因是国内 C 端的付费意愿和能力都非常低，而 AI 又是一个一上来就有 token 成本的事情。
+所以大家卡出来一个小 B 大 C 的概念，就是生产力工具，这个人群兼具了 C 的用户和传播属性和 B 的付费能力。
+摘自 42章经
+#AI
+链接：https://www.xiaohongshu.com/explore/677f2e59000000001703ea73?xsec_token=ABNZlbHupGlH9QiNtlHXdjssySYV1vziDfAonVCuUWSNA=&xsec_source=pc_search&source=web_explore_feed
+---
+
+标题：2025 无需团队，一个人开一家公司🚀
+正文：无需团队，一个人开一家公司
+	
+2025版实用AI工具推荐 | 单人创业工具集
+	
+AI工具正在改变创业格局，使单人创业者能够更高效地展开手脚，释放潜能，简单试错。
+	
+以下是一些对独立创业者有帮助的工具，分为五大类：
+	
+1. 产品开发与设计
+* Cursor：AI增强型IDE，帮助理解代码库，提升编程效率
+* Replit: 基于 AI 的在线编码平台，允许用户在单个浏览器标签页中创建、运行和部署软件应用程序和网站
+* Bolt：低代码平台，帮助非技术人员构建原型
+* V0：AI辅助UI设计工具，简化设计流程
+* Retool：快速构建内部工具 internal tool和应用的平台
+* Aider：IDE内置AI编程助手，支持配对编程（pair programming）
+* Daily co：为开发者提供实时音视频API，支持远程协作
+	
+3. 自动化流程
+* Make：无代码工作流自动化平台
+* Bland AI：AI语音通话服务，可自动化部分电话沟通
+* CrewAI：用于构建协作AI代理系统（ai agent）的框架
+* AutoPilot：优化，自动化流程process
+* Magic Assistants：AI个人助理
+* Granola：会议记录AI工具，自动整理会议要点
+	
+4. 创意灵感
+* Coframe：AI辅助落地页ui优化工具
+* Gamma：演示文稿和slides创建工具
+* Copy.ai：AI文案生成工具
+* Hivespark：AI内容创作与研究工具
+	
+5. 内容创作
+* Leonardo.ai：AI图像生成工具
+* HeyGen：AI视频生成平台，支持文本转视频和多语言功能
+* Synthesia：多语言AI视频创建工具
+* Opus：长视频分割，优化成爆款短视频
+* Playground：AI辅助设计工具:logo, t-shirt， 等等
+	
+#人工智能 #AIGC #未来已来 #我和AI有画说 #低成本创业 #AI工具 #deepseek #轻投入创业 #旧金山湾区 #AI插画
+链接：https://www.xiaohongshu.com/explore/67e07aa8000000001b026a27?xsec_token=ABLStwgiWOZvN--eGPxBQavnucm1xEzRDY35nJlkYmbnk=&xsec_source=pc_search&source=web_explore_feed
+---

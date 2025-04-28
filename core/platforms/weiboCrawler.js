@@ -9,6 +9,7 @@ class WeiboCrawler {
         this.visibleMode = options.visibleMode || false;
         this.maxItems = options.maxItems || 200;
         this.noImage = options.noImage || false;
+        this.saveHtml = options.task ? (options.task.html !== undefined ? options.task.html : true) : true;
         this.cookiePath = options.cookiePath || path.join(process.cwd(), 'weibo_cookie.json');
         this.browser = null;
         this.page = null;

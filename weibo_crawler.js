@@ -11,31 +11,11 @@ const ocrProcessor = require('./utils/ocrProcessor');
 let xhsBrowser, xhsFileSystem;
 try {
     xhsBrowser = require('./utils/xhsBrowser');
-    xhsFileSystem = require('./utils/xhsFileSystem');
+    const XhsFileSystem = require('./utils/xhsFileSystem');
+    xhsFileSystem = new XhsFileSystem();
 } catch (error) {
-    console.warn(`加载小红书模块时出错: ${error.message}`);
-    xhsBrowser = {
-        initialize: async () => console.log('小红书浏览器初始化 (模拟)'),
-        loadCookies: async () => console.log('小红书Cookie加载 (模拟)'),
-        navigateToSearchPage: async () => console.log('小红书搜索页面导航 (模拟)'),
-        getVisibleElements: async () => { console.log('获取小红书元素 (模拟)'); return []; },
-        findAndClickElement: async () => { console.log('点击小红书元素 (模拟)'); return true; },
-        getPageContent: async () => { console.log('获取小红书内容 (模拟)'); return '模拟内容'; },
-        getPostImages: async () => { console.log('获取小红书图片 (模拟)'); return []; },
-        autoScroll: async () => console.log('小红书页面滚动 (模拟)'),
-        navigateToPage: async () => console.log('小红书页面导航 (模拟)'),
-        close: async () => console.log('小红书浏览器关闭 (模拟)')
-    };
-    xhsFileSystem = {
-        ensureDir: () => {},
-        readCookies: () => [],
-        createNoteDirectory: () => '',
-        saveNoteContent: () => '',
-        addVisitedUrl: () => {},
-        isUrlVisited: () => false,
-        getNextNoteIndex: () => 1,
-        mergeJsonFiles: () => 0
-    };
+    console.error(`加载小红书模块时出错: ${error.message}`);
+    process.exit(1);
 }
 
 // 处理微博关键词搜索任务
@@ -340,18 +320,15 @@ async function processXhsKeywordTask(task, xhsFS) {
         const taskDir = path.join(__dirname, 'data', taskFolderName);
         xhsFS.ensureDir(taskDir);
         
-        // 确保历史记录保存在任务文件夹下
-        let history = xhsFS.loadHistory ? xhsFS.loadHistory(taskDir) : [];
-        // 过滤掉不存在的文件夹路径
-        if (Array.isArray(history)) {
-            history = history.filter(item => fs.existsSync(item.folderPath));
-        }
+        // 加载历史记录并验证文件夹是否存在
+        let history = xhsFS.loadHistory(taskDir);
+        // 获取当前目录下的最大笔记序号
+        let noteIndex = xhsFS.getMaxNoteIndex(taskDir) + 1;
         
         await xhsBrowser.navigateToSearchPage(keyword);
         await new Promise(resolve => setTimeout(resolve, 3000));
         
         let processedCount = 0;
-        let noteIndex = 1;
         
         while (processedCount < maxItems) {
             const elements = await xhsBrowser.getVisibleElements();
@@ -366,7 +343,7 @@ async function processXhsKeywordTask(task, xhsFS) {
                 if (processedCount >= maxItems) break;
                 
                 // 使用任务文件夹下的历史记录检查URL是否已访问
-                if (xhsFS.isUrlVisited && xhsFS.isUrlVisited(element.text, taskDir)) continue;
+                if (xhsFS.isUrlVisited(element.text, taskDir)) continue;
                 
                 const clicked = await xhsBrowser.findAndClickElement(element);
                 if (!clicked) continue;
@@ -407,15 +384,9 @@ async function processXhsKeywordTask(task, xhsFS) {
                 }
                 
                 xhsFS.saveNoteContent(noteDir, content);
-                // 确保将访问记录保存在任务文件夹下
-                if (xhsFS.addVisitedUrl) {
-                    xhsFS.addVisitedUrl(element.text, taskDir);
-                } else {
-                    // 如果xhsFileSystem没有实现addVisitedUrl方法，使用历史记录机制
-                    if (xhsFS.addToHistory) {
-                        xhsFS.addToHistory(element.text, noteDir, taskDir);
-                    }
-                }
+                // 将访问记录保存在任务文件夹下
+                xhsFS.addToHistory(element.text, noteDir, taskDir);
+                
                 processedCount++;
                 noteIndex++;
                 

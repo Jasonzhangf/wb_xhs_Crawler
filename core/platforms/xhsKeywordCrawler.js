@@ -142,6 +142,15 @@ class XhsCrawler {
             await this.browser.core.navigateToSearchPage(task.keyword);
             await this.randomWait();
 
+            // Save the HTML content of the search page
+            const searchPageHtml = await this.browser.page.content();
+            fs.writeFileSync(
+                path.join(taskDir, 'search_page.html'),
+                searchPageHtml,
+                'utf8'
+            );
+            console.log('已保存搜索页面HTML内容');
+
             console.log(`尝试查找并点击图片入口: ${IMAGE_ENTRY_SELECTOR}`);
             const imageEntryHandle = await this.browser.page.$(IMAGE_ENTRY_SELECTOR);
             if (!imageEntryHandle) {
@@ -251,6 +260,15 @@ class XhsCrawler {
                         }
 
                         const noteDir = this.createNoteDirectory(taskDir, processedCount + 1);
+
+                        // Save the HTML content of the page
+                        const htmlContent = await this.browser.page.content();
+                        fs.writeFileSync(
+                            path.join(noteDir, 'page.html'),
+                            htmlContent,
+                            'utf8'
+                        );
+                        console.log('已保存页面HTML内容');
 
                         // 获取并下载帖子图片
                         const imageUrls = await this.browser.page.evaluate((selector) => {
@@ -437,6 +455,15 @@ class XhsCrawler {
 
     async processNoteContent(noteDir, content, downloadImages = true) {
         try {
+            // Save the HTML content of the page
+            const pageHtml = await this.browser.page.content();
+            fs.writeFileSync(
+                path.join(noteDir, 'page.html'),
+                pageHtml,
+                'utf8'
+            );
+            console.log(`Saved HTML content to ${path.join(noteDir, 'page.html')}`);
+
             fs.writeFileSync(
                 path.join(noteDir, 'content.json'),
                 JSON.stringify(content, null, 2)

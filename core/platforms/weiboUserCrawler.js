@@ -166,6 +166,10 @@ class WeiboUserCrawler extends WeiboCrawler {
             const postDir = path.join(taskDir, `post_${processedCount + 1}`);
             fs.mkdirSync(postDir, { recursive: true });
 
+            // 保存页面HTML源代码
+            const html = await this.page.content();
+            fs.writeFileSync(path.join(postDir, 'source.html'), html);
+
             if (post.images.length > 0) {
                 const downloadedImages = [];
                 const ocrResults = [];
