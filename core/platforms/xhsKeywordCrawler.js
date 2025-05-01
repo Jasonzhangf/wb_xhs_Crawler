@@ -227,17 +227,57 @@ class XhsCrawler {
                             console.warn(`等待帖子详情元素加载超时或无内容: ${waitError.message}`);
                         }
 
-                        const pageContent = await this.browser.page.evaluate((titleSelector, textSelector, commentSelector) => {
+                        const pageContent = await this.browser.page.evaluate(async (titleSelector, textSelector, commentSelector) => {
                             const title = document.querySelector(titleSelector)?.innerText?.trim() || '';
                             const text = document.querySelector(textSelector)?.innerText?.trim() || '';
-                            const comments = [];
-                            document.querySelectorAll(commentSelector).forEach(el => {
-                                const commentText = el.innerText?.trim();
-                                if (commentText) {
-                                    comments.push(commentText);
+                            const comments = new Set();
+                            
+                            // Check for end markers
+                            const hasEndMarker = () => {
+                                return document.querySelector('#noteContainer > div.interaction-container > div.note-scroller > div.comments-el > div > div.end-container') ||
+                                       document.querySelector('#noteContainer > div.interaction-container > div.note-scroller > div.comments-el > div > p');
+                            };
+                            
+                            // Collect visible comments
+                            const collectComments = () => {
+                                document.querySelectorAll(commentSelector).forEach(el => {
+                                    const text = el.innerText?.trim();
+                                    if (text) comments.add(text);
+                                });
+                            };
+                            console.log('Initial comment collection');
+
+                            // Initial comment collection
+                            collectComments();
+                            console.log('start to  Get comment container');
+
+                            // Get comment container
+                            const container = document.querySelector('#noteContainer > div.interaction-container > div.note-scroller');
+                            if (container) {
+                                let lastHeight = container.scrollHeight;
+                                let noNewCount = 0;
+                                console.log('start to Scroll and collect until end marker or no new comments');
+
+                                // Scroll and collect until end marker or no new comments
+                                while (!hasEndMarker() ) {
+                                    const prevCount = comments.size;
+                                    container.scrollTop = container.scrollHeight;
+                                    await new Promise(r => setTimeout(r, 1000));
+                                    console.log('start to collect new comments');
+
+                                    collectComments();
+                            
+                                    // Check if we got new comments
+                                    if (comments.size === prevCount) noNewCount++;
+                                    else noNewCount = 0;
+                            
+                                    // Check if scroll height changed
+                                    if (container.scrollHeight === lastHeight) noNewCount++;
+                                    lastHeight = container.scrollHeight;
                                 }
-                            });
-                            return { title, text, comments };
+                            }
+                            
+                            return { title, text, comments: Array.from(comments) };
                         }, POST_DETAIL_TITLE_SELECTOR, POST_DETAIL_TEXT_SELECTOR, POST_DETAIL_COMMENT_SELECTOR);
 
                         const uniqueComments = [...new Set(pageContent.comments)];

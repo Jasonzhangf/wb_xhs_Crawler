@@ -38,8 +38,15 @@ class XhsBrowserCore extends BaseBrowser {
 
         // 设置控制台日志监听
         this.page.on('console', msg => {
-            for (let i = 0; i < msg.args().length; ++i)
-                msg.args()[i].jsonValue().then(val => console.log('浏览器日志:', val)).catch(() => {});
+            for (let i = 0; i < msg.args().length; ++i) {
+                msg.args()[i].jsonValue().then(val => {
+                    // 过滤掉 paintTiming 相关的性能测量日志
+                    if (typeof val === 'object' && val && val.measurement_name === 'paintTiming') {
+                        return;
+                    }
+                    console.log('浏览器日志:', val);
+                }).catch(() => {});
+            }
         });
 
         // 等待确保浏览器就绪

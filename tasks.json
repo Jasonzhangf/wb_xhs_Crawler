@@ -3,20 +3,13 @@
   
 
     {
-      "type": "wb_keyword",
-      "keyword": "大模型",
-      "max_items": 10,
-      "noimage": true,
-      "export": ".\\总结",
-      "html": true
-    },
-    {
-      "type": "wb_user",
-      "url": "https://weibo.com/u/1671109627",
+      "type": "xhs_keyword",
+      "keyword": "关税战",
       "max_items": 10,
       "noimage": true,
       "export": ".\\总结",
       "html": true
     }
+
   ]
 }
