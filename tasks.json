@@ -6,10 +6,25 @@
       "type": "xhs_keyword",
       "keyword": "关税战",
       "max_items": 10,
-      "noimage": true,
+      "noimage": false,
+      "export": ".\\总结",
+      "html": true
+    },
+    {
+      "type": "wb_keyword",
+      "keyword": "关税战",
+      "max_items": 10,
+      "noimage": false,
+      "export": ".\\总结",
+      "html": true
+    },  
+    {
+      "type": "wb_user",
+      "url": "https://weibo.com/u/2208787052",
+      "max_items": 10,
+      "noimage": false,
       "export": ".\\总结",
       "html": true
     }
-
   ]
 }

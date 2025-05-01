@@ -151,20 +151,7 @@ class XhsCrawler {
             );
             console.log('已保存搜索页面HTML内容');
 
-            console.log(`尝试查找并点击图片入口: ${IMAGE_ENTRY_SELECTOR}`);
-            const imageEntryHandle = await this.browser.page.$(IMAGE_ENTRY_SELECTOR);
-            if (!imageEntryHandle) {
-                console.error('未能找到图片入口元素，请检查选择器或页面加载状态');
-                return;
-            }
-
-            const entryClicked = await this.browser.interaction.clickElement(imageEntryHandle, { timeout: 10000 });
-            if (!entryClicked) {
-                console.error('未能点击图片入口，即使元素已找到');
-                return;
-            }
-            console.log('成功点击图片入口，等待帖子列表加载...');
-            await this.randomWait(1000, 3000);
+         
 
             let processedCount = 0;
             const maxItems = task.max_items || 10;
