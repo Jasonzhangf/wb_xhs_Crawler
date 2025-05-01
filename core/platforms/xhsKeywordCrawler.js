@@ -403,6 +403,16 @@ class XhsCrawler {
                     }
 
                     if (allVisibleProcessed && visibleHandles.length > 0) {
+                        {
+                            this.noNewContentRetries++;
+                            console.log(`未发现新内容，等待加载... (${this.noNewContentRetries}/5)`);
+                            if (this.noNewContentRetries >= 5) {
+                                console.log('连续5次未发现新内容，提前结束任务');
+                                break;
+                            }
+                        } 
+                            
+                        
                         console.log('当前视图内所有帖子已处理或尝试过，准备滚动...');
                         if (!this.browser.scrolling) {
                             console.error('Scrolling 模块未初始化');
@@ -417,6 +427,7 @@ class XhsCrawler {
                         break;
                     } else {
                         console.log('当前视图内仍有未处理的帖子，将重试...');
+                        this.noNewContentRetries = 0;
                         await this.randomWait(1000, 2000);
                     }
                 } else {
