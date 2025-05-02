@@ -163,7 +163,8 @@ class XhsCrawler {
             const maxItems = task.max_items || 10;
             const processedInThisScroll = new Set();
 
-            while (processedCount < maxItems) {
+            let noNewPostsCount = 0;
+            while (processedCount < maxItems && this.searchRetryCount < this.maxSearchRetries) {
                 console.log(`开始寻找第 ${processedCount + 1} 至 ${maxItems} 条帖子...`);
 
                 const postTitleHandles = await this.browser.page.$$(POST_TITLE_LIST_SELECTOR);
@@ -398,34 +399,34 @@ class XhsCrawler {
                     
                     // 检查连续无新内容的次数
                     if (allVisibleProcessed) {
-                        this.noNewContentRetries++;
-                        console.log(`未发现新内容，等待加载... (${this.noNewContentRetries}/${this.maxNoNewContentRetries})`);
-                        if (this.noNewContentRetries >= this.maxNoNewContentRetries) {
+                        noNewPostsCount++;
+                        console.log(`未发现新内容，等待加载... (${noNewPostsCount}/${this.maxNoNewContentRetries})`);
+                        if (noNewPostsCount >= this.maxNoNewContentRetries) {
                             console.log(`连续${this.maxNoNewContentRetries}次未发现新内容，准备重新搜索...`);
                             this.searchRetryCount++;
                             if (this.searchRetryCount >= this.maxSearchRetries) {
                                 console.log(`已达到最大搜索重试次数(${this.maxSearchRetries})，结束任务`);
                                 return;
                             }
-                            this.noNewContentRetries = 0;
+                            noNewPostsCount = 0;
                             this.processedPostUrls.clear();
                             break;
                         }
                     } else {
-                        this.noNewContentRetries = 0;
+                        noNewPostsCount = 0;
                     }
 
                     if (allVisibleProcessed && visibleHandles.length > 0) {
-                        this.noNewContentRetries++;
-                        console.log(`未发现新内容，等待加载... (${this.noNewContentRetries}/${this.maxNoNewContentRetries})`);
-                        if (this.noNewContentRetries >= this.maxNoNewContentRetries) {
+                        noNewPostsCount++;
+                        console.log(`未发现新内容，等待加载... (${noNewPostsCount}/${this.maxNoNewContentRetries})`);
+                        if (noNewPostsCount >= this.maxNoNewContentRetries) {
                             console.log(`连续${this.maxNoNewContentRetries}次未发现新内容，准备重新搜索...`);
                             this.searchRetryCount++;
                             if (this.searchRetryCount >= this.maxSearchRetries) {
                                 console.log(`已达到最大搜索重试次数(${this.maxSearchRetries})，结束任务`);
                                 return;
                             }
-                            this.noNewContentRetries = 0;
+                            noNewPostsCount = 0;
                             this.processedPostUrls.clear();
                             break;
                         }
@@ -445,7 +446,7 @@ class XhsCrawler {
                         break;
                     } else {
                         console.log('当前视图内仍有未处理的帖子，将重试...');
-                        this.noNewContentRetries = 0;
+                        noNewPostsCount = 0;
                         await this.randomWait(1000, 2000);
                     }
                 } else {
