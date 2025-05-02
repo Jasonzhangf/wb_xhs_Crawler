@@ -98,6 +98,11 @@ class BaseBrowser {
         await new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    // 页面等待指定时间 (兼容 page.waitForTimeout)
+    async waitForTimeout(ms) {
+        await this.wait(ms);
+    }
+
     // 检查登录状态，子类需要实现此方法
     async checkLoginStatus() {
        return true;
