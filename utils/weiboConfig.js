@@ -58,10 +58,7 @@ class WeiboConfig {
             throw new Error('DATA_DIR路径无效');
         }
         
-        // 确保基础数据目录存在
-        if (!fs.existsSync(this.DATA_DIR)) {
-            fs.mkdirSync(this.DATA_DIR, { recursive: true });
-        }
+
         
         // 如果是mergeonly模式，只需要确保基础数据目录存在
         if (argv.mergeonly && !this.KEYWORD && !this.URL) {
@@ -88,10 +85,7 @@ class WeiboConfig {
             this.currentDir = path.join(this.DATA_DIR, 'weibo_' + Date.now());
         }
 
-        // 创建当前工作目录
-        if (!fs.existsSync(this.currentDir)) {
-            fs.mkdirSync(this.currentDir, { recursive: true });
-        }
+
 
         // 历史记录功能已移除
     }

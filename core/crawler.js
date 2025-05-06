@@ -26,8 +26,7 @@ class Crawler {
      * 初始化爬虫环境
      */
     async initialize() {
-        // 确保数据目录存在
-        this.ensureDir(path.join(process.cwd(), this.options.dataDir));
+        // 初始化方法留空，由具体任务处理目录创建
     }
 
     /**

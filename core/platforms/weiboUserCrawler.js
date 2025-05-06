@@ -29,6 +29,13 @@ class WeiboUserCrawler extends WeiboCrawler {
         return match ? match[1] : null;
     }
 
+    extractPostIdFromUrl(url) {
+        if (!url) return null;
+        const match = url.match(/weibo\.com\/(\d+)\/[a-zA-Z0-9]+\/(\d+)/) || 
+                     url.match(/weibo\.com\/\d+\/(\d+)/);
+        return match ? match[match.length - 1] : null;
+    }
+
     async downloadImage(url, filePath) {
         return new Promise((resolve, reject) => {
             https.get(url, (response) => {
@@ -164,7 +171,9 @@ class WeiboUserCrawler extends WeiboCrawler {
             if (this.processedUrls.has(post.postUrl)) return null;
 
             const postDir = path.join(taskDir, `post_${processedCount + 1}`);
-            fs.mkdirSync(postDir, { recursive: true });
+            if (!fs.existsSync(postDir)) {
+                fs.mkdirSync(postDir, { recursive: true });
+            }
 
             // 保存页面HTML源代码
             const html = await this.page.content();
@@ -319,29 +328,47 @@ class WeiboUserCrawler extends WeiboCrawler {
                 });
             }
 
-            // 生成并创建任务目录
-            const taskFolderName = this.taskManager.generateTaskFolderName('weibo', { ...task, user_id: userInfo.name || userId });
+ 
+  
+            
+            // 生成任务文件夹名称
+            const taskFolderName = this.taskManager.generateTaskFolderName('weibo', task);
             
             // 检查任务是否已存在并获取任务目录
-            let taskDir;
+            let taskDir = this.taskManager.createTaskDirectory('weibo', taskFolderName);
+            let processedCount = 0; // Initialize processedCount at the beginning
+            
+            // 检查任务文件夹是否存在
             if (this.taskManager.checkTaskExists('weibo', taskFolderName)) {
                 console.log(`任务 ${taskFolderName} 已存在，验证历史记录...`);
                 taskDir = path.join(process.cwd(), 'data', 'weibo', taskFolderName);
-            } else {
-                taskDir = this.taskManager.createTaskDirectory('weibo', taskFolderName);
-            }
+                console.log(`任务 ${taskFolderName} 查找最大文件夹序号...`);
+                
+                // 获取所有子文件夹并找出最大序号
+                const subDirs = fs.readdirSync(taskDir)
+                    .filter(file => fs.statSync(path.join(taskDir, file)).isDirectory())
+                    .filter(dir => dir.startsWith('post_'));
+                
+                let maxIndex = 0;
+                if (subDirs.length > 0) {
+                    maxIndex = Math.max(...subDirs.map(dir => {
+                        const match = dir.match(/post_(\d+)/);
+                        return match ? parseInt(match[1]) : 0;
+                    }));
+                }
+                const startIndex = maxIndex + 1;
+                console.log(`找到最大序号: ${maxIndex}`);
+                processedCount = maxIndex;
+            } 
 
-            // 处理历史记录
-            const history = this.taskManager.verifyHistory(taskDir);
-            history.urls.forEach(url => this.processedUrls.add(url));
 
-            let processedCount = 0;
             const maxItems = task.max_items || this.maxItems;
             const posts = [];
             let noNewContentRetries = 0;
-            const maxNoNewContentRetries = 5; // 连续无新内容的最大重试次数
+            const maxNoNewContentRetries = 15; // 连续无新内容的最大重试次数
+            let newPostCount = 0; // 新增帖子计数器
 
-            while (processedCount < maxItems && noNewContentRetries < maxNoNewContentRetries) {
+            while (newPostCount < maxItems && noNewContentRetries < maxNoNewContentRetries) {
                 const pageState = await this.observePage();
                 
                 // 处理Type A元素（展开按钮）
@@ -350,12 +377,13 @@ class WeiboUserCrawler extends WeiboCrawler {
 
                 // 处理Type B元素（主要内容）
                 for (const element of pageState.elements.typeB) {
-                    if (processedCount >= maxItems) break;
+                    if (newPostCount >= maxItems) break;
 
-                    const post = await this.handleTypeBElement(element, taskDir, processedCount);
+                    const postIndex = processedCount + newPostCount + 1;
+                    const post = await this.handleTypeBElement(element, taskDir, postIndex);
                     if (post) {
                         posts.push(post);
-                        processedCount++;
+                        newPostCount++;
                     }
                 }
 

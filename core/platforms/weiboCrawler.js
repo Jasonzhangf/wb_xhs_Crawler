@@ -1,15 +1,14 @@
-const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch');
 const OCRProcessor = require('../../utils/ocrProcessor');
+const WeiboBrowserCore = require('../../utils/browser/weiboBrowserCore');
 
 class WeiboCrawler {
     constructor(options = {}) {
         this.visibleMode = options.visibleMode || false;
         this.maxItems = options.maxItems || 200;
         this.noImage = options.noImage || false;
-        this.saveHtml = options.task ? (options.task.html !== undefined ? options.task.html : true) : true;
         this.cookiePath = options.cookiePath || path.join(process.cwd(), 'weibo_cookie.json');
         this.browser = null;
         this.page = null;
@@ -17,19 +16,13 @@ class WeiboCrawler {
 
     async initialize() {
         try {
-            this.browser = await puppeteer.launch({
-                headless: !this.visibleMode,
-                args: ['--disable-blink-features=AutomationControlled', '--start-maximized']
+            const browserCore = new WeiboBrowserCore({
+                visibleMode: this.visibleMode
             });
-            this.page = await this.browser.newPage();
+            await browserCore.initialize();
+            this.browser = browserCore.browser;
+            this.page = browserCore.page;
             
-            // 设置默认视窗大小
-            await this.page.setViewport({
-                width: 1920,
-                height: 1080,
-                deviceScaleFactor: 1
-            });
-
             // 监听视窗大小变化
             this.page.on('resize', async () => {
                 const dimensions = await this.page.evaluate(() => ({
@@ -103,6 +96,7 @@ class WeiboCrawler {
                 post.ocr_results = ocrResults;
             }
         } else {
+            console.log('noImage is true, skipping image download and OCR processing');
             post.images = post.images.map(url => url);
         }
     }

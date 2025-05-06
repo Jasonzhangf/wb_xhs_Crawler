@@ -28,7 +28,7 @@ class WeiboKeywordCrawler extends WeiboCrawler {
                 const taskDir = path.join(process.cwd(), 'data', 'weibo', taskFolderName);
                 const history = this.taskManager.verifyHistory(taskDir);
                 this.processedUrls = new Set(history.urls);
-                return;
+                //return;
             }
             
             const taskDir = this.taskManager.createTaskDirectory('weibo', taskFolderName);

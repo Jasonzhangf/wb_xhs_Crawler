@@ -80,9 +80,44 @@ class TaskManager {
         const postDirs = fs.readdirSync(taskDir)
             .filter(dir => dir.startsWith('post_'))
             .map(dir => parseInt(dir.replace('post_', '')))
-            .filter(num => !isNaN(num));
+            .filter(num => !isNaN(num))
+            .sort((a, b) => a - b);
 
-        return postDirs.length > 0 ? Math.max(...postDirs) + 1 : 1;
+        if (postDirs.length === 0) {
+            return 1;
+        }
+
+        // Find the first gap in the sequence or return max + 1
+        for (let i = 0; i < postDirs.length; i++) {
+            if (postDirs[i] !== i + 1) {
+                return i + 1;
+            }
+        }
+        
+        // Check if any folders were manually deleted
+        const existingFolders = new Set(postDirs);
+        for (let i = 1; i <= postDirs[postDirs.length - 1]; i++) {
+            if (!existingFolders.has(i)) {
+                return i;
+            }
+        }
+        
+        // Verify the folder doesn't already exist
+        const nextIndex = postDirs.length + 1;
+        const nextFolderPath = path.join(taskDir, `post_${nextIndex}`);
+        if (!fs.existsSync(nextFolderPath)) {
+            return nextIndex;
+        }
+        
+        // If folder exists, find next available index
+        for (let i = 1; i <= nextIndex; i++) {
+            const folderPath = path.join(taskDir, `post_${i}`);
+            if (!fs.existsSync(folderPath)) {
+                return i;
+            }
+        }
+        
+        return nextIndex;
     }
 
     mergeJsonFiles(taskDir) {
