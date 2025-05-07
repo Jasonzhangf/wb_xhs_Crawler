@@ -332,6 +332,7 @@ class WeiboUserCrawler extends WeiboCrawler {
   
             
             // 生成任务文件夹名称
+            task.user_info = userInfo; // 将用户信息添加到task对象中
             const taskFolderName = this.taskManager.generateTaskFolderName('weibo', task);
             
             // 检查任务是否已存在并获取任务目录

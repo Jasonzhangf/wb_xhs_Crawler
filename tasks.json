@@ -1,13 +1,26 @@
 {
   "tasks": [
-
     {
       "type": "wb_user",
       "url": "https://weibo.com/u/2169039837",
-      "max_items": 10,
-      "noimage": true,
-      "export": ".\\总结",
-      "html": true
-    }
+      "max_items": 500,
+      "noimage": false,
+      "export": "G:\\search"
+    },
+    {
+      "type": "wb_keyword",
+      "keyword": "关税",
+      "max_items": 300,
+      "noimage": false,
+      "export": "G:\\search"
+    },
+    {
+      "type": "xhs_keyword",
+      "keyword": "cursor免费",
+      "max_items": 300,
+      "noimage": false,
+      "export": "G:\\search"
+    } 
+
   ]
 }

@@ -71,7 +71,9 @@ class TaskManager {
             if (task.keyword) {
                 return `weibo_${task.keyword}_${dateStr}`;
             } else if (task.user_id || task.url) {
-                return `wb_user_${task.user_id || 'url'}_${dateStr}`;
+                // 如果有用户名，使用用户名，否则使用user_id或url
+                const userName = task.user_info ? task.user_info.name : (task.user_id || 'url');
+                return `wb_user_${userName}_${dateStr}`;
             }
         } else if (platform === 'xhs') {
             if (task.keyword) {
